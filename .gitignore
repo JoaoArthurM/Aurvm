@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.chrome-*/
+.codex-remote-attachments/
+aurvm-dashboard*.png
+android/.gradle/
+android/local.properties
+android/app/build/
+*.log
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.env

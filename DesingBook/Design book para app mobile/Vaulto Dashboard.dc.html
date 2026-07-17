@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#e8e8ea;font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .vx-num{font-family:'Archivo';font-weight:800;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;background:#e8e8ea">
+  <div style="width:1360px;height:920px;flex:none;flex-shrink:0;border-radius:22px;overflow:hidden;display:flex;background:#050506;box-shadow:0 40px 120px rgba(0,0,0,.35);position:relative">
+
+    <!-- ================= SIDEBAR ================= -->
+    <aside style="width:296px;flex:none;background:linear-gradient(180deg,#111113 0%,#0a0a0b 100%);border-right:1px solid rgba(255,255,255,.05);padding:24px 18px;display:flex;flex-direction:column;position:relative;z-index:3">
+      <!-- logo -->
+      <div style="display:flex;align-items:center;gap:11px;padding:2px 8px 26px">
+        <div style="width:30px;height:30px;border-radius:8px;background:radial-gradient(circle at 50% 45%,#FF7A1A,#FF3B0F);display:flex;align-items:center;justify-content:center">
+          <svg width="20" height="20" viewBox="0 0 24 24"><g fill="#fff"><circle cx="12" cy="12" r="2.6"/></g><g stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 3.2v2M12 19v1.8M3.4 12h2M18.8 12h1.8M6 6l1.4 1.4M16.8 16.8l1.4 1.4M18 6l-1.4 1.4M7.4 16.8 6 18.2"/></g></svg>
+        </div>
+        <span style="font-family:'Archivo';font-weight:800;font-size:21px;color:#fff;letter-spacing:-.02em">ArthVault</span>
+        <div style="margin-left:auto;width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><div style="width:11px;height:12px;border:1.6px solid rgba(255,255,255,.35);border-radius:2px"></div></div>
+      </div>
+
+      {{ sidebarNav }}
+
+      <!-- upgrade -->
+      <div style="position:relative;border-radius:15px;padding:15px 16px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);overflow:hidden">
+        <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:180px;height:80px;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%)"></div>
+        <div style="position:relative;display:flex;align-items:center;gap:11px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+          <div><div style="color:#fff;font-weight:600;font-size:14px">Upgrade to PRO</div><div style="color:rgba(255,255,255,.5);font-size:11px">Get one month free and unlock</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- glow bleeding OUT of sidebar at its right edge, follows active item -->
+    {{ sidebarGlow }}
+
+    <!-- ================= MAIN ================= -->
+    <main style="flex:1;position:relative;overflow:hidden;background:#050506">
+      <!-- ambient glow: broad soft light washing down through the whole system -->
+      <div style="position:absolute;top:-360px;left:50%;transform:translateX(-50%);width:1300px;height:1500px;background:radial-gradient(50% 50% at 50% 30%,rgba(200,200,208,.22),rgba(150,150,158,.08) 40%,transparent 68%);pointer-events:none;filter:blur(60px)"></div>
+      <div style="position:absolute;top:-280px;left:52%;transform:translateX(-50%);width:620px;height:640px;background:radial-gradient(50% 50% at 50% 50%,rgba(245,245,248,.32),transparent 64%);pointer-events:none;filter:blur(40px)"></div>
+      <div style="position:absolute;top:120px;left:50%;transform:translateX(-50%);width:1100px;height:900px;background:radial-gradient(50% 50% at 50% 30%,rgba(190,190,198,.1),transparent 70%);pointer-events:none;filter:blur(70px)"></div>
+      <div style="position:relative;padding:22px 26px;height:100%;overflow-y:auto">
+
+        <!-- topbar -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:26px">
+          <div style="font-size:15px;color:rgba(255,255,255,.4);white-space:nowrap">ArthVault / <span style="color:#fff">Visão geral</span></div>
+          <div style="flex:1;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span style="flex:1;color:rgba(255,255,255,.4);font-size:14px">Buscar lançamento, categoria…</span>
+            <span style="font-size:12px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px">⌘</span>
+            <span style="font-size:12px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.06);border-radius:6px;padding:2px 7px">K</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div title="Sincronizado com Google Drive" style="display:flex;align-items:center;gap:8px;background:rgba(55,214,122,.09);border:1px solid rgba(55,214,122,.22);border-radius:999px;padding:6px 12px 6px 10px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7.7 4h8.6l4.2 7.3-4.3 7.4H7.8L3.5 11.3z" fill="none"/><path d="M8.9 4.2 3.6 13.4l2.6 4.5 5.3-9.2z" fill="#2684FC"/><path d="M15.1 4.2H8.9l5.2 9 3.1-.02z" fill="#00AC47"/><path d="m20.4 13.4-3.1.02-3.2 5.5h6.2z" fill="#FFBA00"/></svg>
+              <span style="font-size:12px;color:#37D67A;font-weight:500">Drive sincronizado</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.4)">agora</span>
+            </div>
+            <div style="position:relative;cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 21a2 2 0 0 0 3 0"/></svg><span style="position:absolute;top:-1px;right:0;width:7px;height:7px;border-radius:50%;background:#FF3B0F;border:1.5px solid #050506"></span></div>
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:4px 12px 4px 4px;cursor:pointer">
+              <div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#5b5b64,#26262c)"></div>
+              <div style="line-height:1.1"><div style="font-size:12px;color:#fff;font-weight:600">Ana Duarte</div><div style="font-size:10px;color:rgba(255,255,255,.4)">Plano Pessoal</div></div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- resumo do mês -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px">
+          <div>
+            <div style="font-size:16px;color:rgba(255,255,255,.55);margin-bottom:6px">Saldo disponível</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="vx-num" style="font-size:44px;color:#fff;white-space:nowrap">R$ 2.570,00</span>
+              <span style="font-size:13px;color:#37D67A;background:rgba(55,214,122,.12);padding:3px 9px;border-radius:20px">↑ +12%</span>
+            </div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5);margin-top:8px">de <span style="color:#fff">R$ 8.500,00</span> em entradas · <span style="color:#fff">R$ 5.930,00</span> em gastos neste mês</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);padding:9px 14px;border-radius:11px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>Junho 2026<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:9px 14px;border-radius:11px;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Ver relatório</span>
+          </div>
+        </div>
+
+        <!-- faixa de resumo -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;margin-bottom:24px">
+          <div style="background:#0d0d0f;padding:16px 18px">
+            <div style="font-size:12px;color:rgba(255,255,255,.5)">Total de entradas</div>
+            <div class="vx-num" style="font-size:22px;color:#fff;margin-top:8px">R$ 8.500</div>
+            <div style="font-size:11px;color:#37D67A;margin-top:4px">↑ +6% vs mês passado</div>
+          </div>
+          <div style="background:#0d0d0f;padding:16px 18px">
+            <div style="font-size:12px;color:rgba(255,255,255,.5)">Total de gastos</div>
+            <div class="vx-num" style="font-size:22px;color:#fff;margin-top:8px">R$ 5.930</div>
+            <div style="font-size:11px;color:#FF4D4D;margin-top:4px">↑ +3% vs mês passado</div>
+          </div>
+          <div style="background:#0d0d0f;padding:16px 18px">
+            <div style="font-size:12px;color:rgba(255,255,255,.5)">Total economizado</div>
+            <div class="vx-num" style="font-size:22px;color:#fff;margin-top:8px">R$ 1.700</div>
+            <div style="font-size:11px;color:#37D67A;margin-top:4px">↑ +18% vs mês passado</div>
+          </div>
+          <div style="background:#0d0d0f;padding:16px 18px">
+            <div style="font-size:12px;color:rgba(255,255,255,.5)">Renda comprometida</div>
+            <div class="vx-num" style="font-size:22px;color:#fff;margin-top:8px">70%</div>
+            <div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:9px;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,#FF6A1A,#FF2D2D)"></div></div>
+          </div>
+          <div style="background:#0d0d0f;padding:16px 18px">
+            <div style="font-size:12px;color:rgba(255,255,255,.5)">Renda economizada</div>
+            <div class="vx-num" style="font-size:22px;color:#fff;margin-top:8px">20%</div>
+            <div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:9px;overflow:hidden"><div style="width:20%;height:100%;background:linear-gradient(90deg,#37D67A,#2ea866)"></div></div>
+          </div>
+        </div>
+
+        <!-- KPIs principais -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-weight:600;font-size:15px;color:#fff">KPIs principais</span>
+          <span style="font-size:12px;color:rgba(255,255,255,.45)">Junho 2026</span>
+        </div>
+
+        <!-- KPI cards -->
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px">
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#161619,#0b0b0d);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="position:absolute;top:0;right:0;width:60%;height:100%;opacity:.4;background-image:radial-gradient(rgba(255,255,255,.2) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(55,214,122,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#37D67A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/></svg></span><span style="font-size:13px;color:rgba(255,255,255,.6)">Entradas</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 8.500</div>
+              <div style="font-size:12px;color:#37D67A;margin-top:5px">↑ +6% <span style="color:rgba(255,255,255,.4)">vs mês passado</span></div>
+            </div>
+          </div>
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#161619,#0b0b0d);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="position:absolute;top:0;right:0;width:60%;height:100%;opacity:.4;background-image:radial-gradient(rgba(255,255,255,.2) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span style="font-size:13px;color:rgba(255,255,255,.6)">Gastos fixos</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 3.200</div>
+              <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:5px">→ estável <span style="color:rgba(255,255,255,.4)">vs mês passado</span></div>
+            </div>
+          </div>
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#161619,#0b0b0d);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="position:absolute;top:0;right:0;width:60%;height:100%;opacity:.4;background-image:radial-gradient(rgba(255,255,255,.2) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(255,59,15,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF6A1A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg></span><span style="font-size:13px;color:rgba(255,255,255,.6)">Gastos variáveis</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 1.980</div>
+              <div style="font-size:12px;color:#FF4D4D;margin-top:5px">↑ +11% <span style="color:rgba(255,255,255,.4)">vs mês passado</span></div>
+            </div>
+          </div>
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#161619,#0b0b0d);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="position:absolute;top:0;right:0;width:60%;height:100%;opacity:.4;background-image:radial-gradient(rgba(255,255,255,.2) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a8 8 0 0 1 13-2l3 2M20 6v3h-3M20 16a8 8 0 0 1-13 2l-3-2M4 18v-3h3"/></svg></span><span style="font-size:13px;color:rgba(255,255,255,.6)">Assinaturas</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 750</div>
+              <div style="font-size:12px;color:#FF4D4D;margin-top:5px">↑ +2 novas <span style="color:rgba(255,255,255,.4)">este mês</span></div>
+            </div>
+          </div>
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#161619,#0b0b0d);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="position:absolute;top:0;right:0;width:60%;height:100%;opacity:.4;background-image:radial-gradient(rgba(255,255,255,.2) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(55,214,122,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#37D67A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></span><span style="font-size:13px;color:rgba(255,255,255,.6)">Economia</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 1.700</div>
+              <div style="font-size:12px;color:#37D67A;margin-top:5px">↑ +18% <span style="color:rgba(255,255,255,.4)">vs mês passado</span></div>
+            </div>
+          </div>
+
+          <div style="position:relative;border-radius:18px;padding:16px;background:radial-gradient(120% 120% at 100% 0%,#26262b,#131316);border:1px solid rgba(255,255,255,.16);overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 16px 40px rgba(0,0,0,.55)">
+            <div style="position:absolute;top:0;right:0;width:66%;height:100%;opacity:.6;background-image:radial-gradient(rgba(255,255,255,.26) 1.1px,transparent 1.6px);background-size:6px 6px;-webkit-mask-image:linear-gradient(to left,#000,transparent);mask-image:linear-gradient(to left,#000,transparent)"></div>
+            <div style="position:relative">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13a2 2 0 0 1 2 2v1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2v1a2 2 0 0 1-2 2H3z"/><circle cx="17" cy="12.5" r=".9" fill="#fff" stroke="none"/></svg></span><span style="font-size:13px;color:#fff">Saldo livre</span></div>
+              <div class="vx-num" style="font-size:24px;color:#fff;margin-top:16px">R$ 870</div>
+              <div style="font-size:12px;color:#37D67A;margin-top:5px">disponível <span style="color:rgba(255,255,255,.5)">após economia</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- charts row -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px">
+          <!-- line -->
+          <div style="border-radius:18px;padding:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div><div style="font-size:14px;color:rgba(255,255,255,.55)">Fluxo do mês</div><div class="vx-num" style="font-size:26px;color:#fff;margin-top:4px">R$ 8.500</div></div>
+              <div style="display:flex;gap:8px">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 11px;border-radius:9px">Tudo ▾</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 11px;border-radius:9px">Personalizado ▾</span>
+              </div>
+            </div>
+            <div style="position:relative;margin-top:8px">
+            <svg viewBox="0 0 560 200" width="100%" height="180" style="display:block" preserveAspectRatio="none">
+              <g stroke="rgba(255,255,255,.045)" stroke-width="1"><path d="M0 50H560M0 100H560M0 150H560M93 0V200M186 0V200M280 0V200M373 0V200M466 0V200"/></g>
+              <path d="M0 150 C60 145 90 158 140 150 C200 140 210 105 270 110 C330 115 350 70 410 60 C470 50 510 40 560 20" fill="none" stroke="#EDEDED" stroke-width="2.5"/>
+              <path d="M0 120 C50 118 80 90 140 100 C210 112 220 150 280 148 C340 146 360 95 420 80 C480 66 520 40 560 30" fill="none" stroke="#FF2D2D" stroke-width="2.5"/>
+              <line x1="300" y1="0" x2="300" y2="200" stroke="rgba(255,255,255,.22)" stroke-dasharray="3 4"/>
+            </svg>
+            <div style="position:absolute;left:53.5%;top:74%;width:15px;height:15px;transform:translate(-50%,-50%);border-radius:50%;background:#FF6A1A;box-shadow:0 0 0 4px rgba(255,106,26,.22),0 0 16px 3px rgba(255,106,26,.6)"></div>
+            <div style="position:absolute;left:41%;top:38%;background:rgba(28,28,31,.92);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px 11px;backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.5)"><div style="font-size:11px;color:rgba(255,255,255,.5)">12 jun 2026</div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px">Entradas: <span style="color:#fff;font-weight:600">R$ 6.240</span></div></div>
+            </div>
+            <div style="display:flex;gap:5px;margin-top:12px;flex-wrap:nowrap;overflow:hidden">
+              <span style="flex:1"></span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">1</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">2</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">3</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">5</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">6</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">7</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">8</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">9</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">10</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">11</span>
+              <span style="font-size:11px;color:#fff;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center">12</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">13</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">15</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">17</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">18</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">19</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">20</span>
+              <span style="font-size:11px;color:rgba(255,255,255,.5);width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center">21</span>
+              <span style="flex:1"></span>
+            </div>
+          </div>
+          <!-- bars -->
+          <div style="border-radius:18px;padding:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div><div style="font-size:14px;color:rgba(255,255,255,.55)">Gastos por semana</div><div class="vx-num" style="font-size:26px;color:#fff;margin-top:4px">R$ 1.980</div></div>
+              <span style="font-size:12px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:6px 11px;border-radius:9px">Ver tudo</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:14px;height:150px;margin-top:16px">
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:52%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:36%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:70%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:88%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div><div style="position:absolute;left:0;right:0;top:16%;height:26%;background:linear-gradient(180deg,#FF5A20,#FF2D2D);border-radius:8px;box-shadow:0 0 22px 3px rgba(255,60,20,.6)"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+              <div style="flex:1;height:100%;background:linear-gradient(180deg,#202024,#131316);border-radius:8px;position:relative;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:80%;background:linear-gradient(180deg,#34343a,#26262a);border-radius:8px"></div></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.4)"><span style="flex:1;text-align:center">Dom</span><span style="flex:1;text-align:center">Seg</span><span style="flex:1;text-align:center">Ter</span><span style="flex:1;text-align:center;color:#fff">Qua</span><span style="flex:1;text-align:center">Qui</span><span style="flex:1;text-align:center">Sex</span><span style="flex:1;text-align:center">Sáb</span></div>
+          </div>
+        </div>
+
+        <!-- bottom row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <!-- recent activity -->
+          <div style="border-radius:18px;padding:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-weight:600;font-size:15px;color:#fff">Últimos lançamentos</span><span style="font-size:12px;color:rgba(255,255,255,.5)">Ver tudo</span></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:34px;height:34px;border-radius:10px;background:#1c1c1f;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="m12 3 6 9-6 4-6-4z"/><path d="m6 13 6 8 6-8"/></svg></div><div style="flex:1"><div style="font-weight:600;font-size:13px;color:#fff">Salário</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Entrada · Hoje</div></div><span class="vx-num" style="font-size:13px;color:#37D67A">+R$ 6.240</span></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:34px;height:34px;border-radius:10px;background:#1c1c1f;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></div><div style="flex:1"><div style="font-weight:600;font-size:13px;color:#fff">Aluguel</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Gasto fixo · Qui</div></div><span class="vx-num" style="font-size:13px;color:#fff">−R$ 1.800</span></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:34px;height:34px;border-radius:10px;background:#1c1c1f;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M6 3h6l6 9-6 9H6l6-9z"/></svg></div><div style="flex:1"><div style="font-weight:600;font-size:13px;color:#fff">iFood</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Gasto variável · Seg</div></div><span class="vx-num" style="font-size:13px;color:#fff">−R$ 68</span></div>
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0"><div style="width:34px;height:34px;border-radius:10px;background:#1c1c1f;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M3 7l4 10 5-12 5 12 4-10"/></svg></div><div style="flex:1"><div style="font-weight:600;font-size:13px;color:#fff">Netflix</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Assinatura · Sex</div></div><span class="vx-num" style="font-size:13px;color:#fff">−R$ 55</span></div>
+          </div>
+
+          <!-- total assets sankey -->
+          <div style="border-radius:18px;padding:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.06)">
+            <div style="font-size:14px;color:rgba(255,255,255,.55)">Para onde foi o dinheiro</div>
+            <div class="vx-num" style="font-size:26px;color:#fff;margin:4px 0 14px">R$ 5.930</div>
+            <div style="position:relative;height:150px">
+              <svg viewBox="0 0 360 160" width="100%" height="150" preserveAspectRatio="none" style="position:absolute;inset:0">
+                <path d="M70 34 C170 34 190 78 250 78 L250 96 C190 96 170 52 70 52 Z" fill="rgba(255,255,255,.14)"/>
+                <path d="M70 108 C170 108 190 60 250 60 L250 78 C190 78 170 126 70 126 Z" fill="rgba(255,255,255,.1)"/>
+                <path d="M310 34 C270 34 270 70 250 70 L250 86 C270 86 270 44 310 50 Z" fill="rgba(255,45,45,.4)"/>
+                <path d="M250 82 C280 82 285 122 310 126 L310 112 C285 108 275 96 250 96 Z" fill="rgba(255,255,255,.1)"/>
+              </svg>
+              <div style="position:absolute;left:0;top:14%;width:66px"><div style="background:#17171a;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px"><div style="font-size:10px;color:rgba(255,255,255,.55)">Renda</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">8.500</div></div></div>
+              <div style="position:absolute;left:0;top:58%;width:66px"><div style="background:#17171a;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px"><div style="font-size:10px;color:rgba(255,255,255,.55)">Extra</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">1.260</div></div></div>
+              <div style="position:absolute;left:50%;top:30%;transform:translateX(-50%);width:66px"><div style="background:linear-gradient(135deg,#FF3B0F,#FF2D2D);border-radius:9px;padding:7px 9px;box-shadow:0 6px 16px rgba(255,45,45,.35)"><div style="font-size:10px;color:#fff">Fixos</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">3.200</div></div></div>
+              <div style="position:absolute;left:50%;top:72%;transform:translateX(-50%);width:66px"><div style="background:#17171a;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px"><div style="font-size:10px;color:rgba(255,255,255,.55)">Variáveis</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">1.980</div></div></div>
+              <div style="position:absolute;right:0;top:14%;width:66px"><div style="background:#17171a;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px"><div style="font-size:10px;color:rgba(255,255,255,.55)">Assinat.</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">750</div></div></div>
+              <div style="position:absolute;right:0;top:72%;width:66px"><div style="background:#17171a;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px"><div style="font-size:10px;color:rgba(255,255,255,.55)">Economia</div><div class="vx-num" style="font-size:12px;color:#fff;margin-top:2px">1.700</div></div></div>
+            </div>
+          </div>
+
+          <!-- net cashflow heatmap -->
+          <div style="border-radius:18px;padding:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-size:14px;color:rgba(255,255,255,.55)">Mapa de gastos</div><span style="font-size:12px;color:rgba(255,255,255,.5)">Junho</span></div>
+            <div class="vx-num" style="font-size:26px;color:#fff;margin:4px 0 16px">R$ 5.930</div>
+            <div style="display:grid;grid-template-columns:repeat(13,1fr);grid-template-rows:repeat(6,1fr);gap:4px">
+              <div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#4a4a50"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div>
+              <div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#4a4a50"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div>
+              <div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#4a4a50"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div>
+              <div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#4a4a50"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div>
+              <div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div>
+              <div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#fff"></div><div style="aspect-ratio:1;border-radius:3px;background:#1c1c1f"></div><div style="aspect-ratio:1;border-radius:3px;background:#2c2c30"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(p){
+    super(p);
+    this.state = { active: 'visao', open: {}, hovered: null, glowTop: 60 };
+    this.activeRef = React.createRef();
+    this.nav = [
+      { id:'visao', label:'Visão geral', icon:'home' },
+      { id:'mensais', label:'Itens mensais', icon:'calendar', children:[
+        { id:'m-entradas', label:'Entradas' },
+        { id:'m-fixos', label:'Gastos fixos' },
+        { id:'m-variaveis', label:'Gastos variáveis' },
+        { id:'m-assinaturas', label:'Assinaturas' },
+      ]},
+      { id:'economia', label:'Economia', icon:'coins', children:[
+        { id:'e-metas', label:'Metas de 10%, 20% e 30%' },
+        { id:'e-planejadas', label:'Economias planejadas' },
+        { id:'e-proj-mensal', label:'Projeção mensal' },
+        { id:'e-proj-anual', label:'Projeção anual' },
+      ]},
+      { id:'relatorios', label:'Relatórios', icon:'bars', children:[
+        { id:'r-kpis', label:'KPIs' },
+        { id:'r-fluxo', label:'Fluxo do mês' },
+        { id:'r-mapa', label:'Mapa de gastos' },
+        { id:'r-categoria', label:'Gráficos por categoria' },
+        { id:'r-historico', label:'Histórico' },
+      ]},
+      { id:'config', label:'Configurações', icon:'gear' },
+    ];
+  }
+  componentDidMount(){ this.syncGlow(); }
+  componentDidUpdate(){ this.syncGlow(); }
+  syncGlow(){
+    const el = this.activeRef.current; if(!el) return;
+    const aside = el.closest('aside'); if(!aside) return;
+    const r = el.getBoundingClientRect(), a = aside.getBoundingClientRect();
+    const top = Math.round(r.top - a.top + r.height/2);
+    if(Math.abs(top - this.state.glowTop) > 1) this.setState({ glowTop: top });
+  }
+  toggle(id){ this.setState(s => ({ open: { ...s.open, [id]: !s.open[id] } })); }
+  select(id){ this.setState({ active: id }); }
+  setHover(id){ this.setState({ hovered: id }); }
+  icon(name, color){
+    const P = (d, extra) => React.createElement('path', Object.assign({ d }, extra||{}));
+    const C = (o) => React.createElement('circle', o);
+    const R = (o) => React.createElement('rect', o);
+    const kids = {
+      home:     [P('M3 10.5 12 4l9 6.5V20H3z')],
+      calendar: [R({x:3,y:4.5,width:18,height:16,rx:3}), P('M3 9.5h18'), P('M8 3v3'), P('M16 3v3')],
+      coins:    [React.createElement('ellipse',{cx:12,cy:6,rx:7,ry:3}), P('M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6'), P('M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3')],
+      bars:     [P('M5 20V11M12 20V4M19 20v-6')],
+      gear:     [C({cx:12,cy:12,r:3}), P('M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.4 5.4 7.2 7.2M16.8 16.8l1.8 1.8M18.6 5.4 16.8 7.2M7.2 16.8 5.4 18.6')],
+    };
+    return React.createElement('svg', { width:19, height:19, viewBox:'0 0 24 24', fill:'none', stroke:color, strokeWidth:1.85, strokeLinecap:'round', strokeLinejoin:'round', style:{flex:'none'} }, kids[name]);
+  }
+  renderVals(){
+    const { active, open, hovered } = this.state;
+    const nodes = [];
+    nodes.push(React.createElement('div', { key:'lbl', style:{ fontSize:11, letterSpacing:'.14em', color:'rgba(255,255,255,.32)', padding:'0 10px 12px' } }, 'MENU'));
+
+    this.nav.forEach(it => {
+      const isActive = active === it.id && !it.children;
+      const isOpen = !!open[it.id];
+      const hov = hovered === it.id;
+      const rowStyle = { display:'flex', alignItems:'center', gap:13, padding:'12px 14px', borderRadius:13, cursor:'pointer', marginBottom:2, border:'1px solid transparent', transition:'background .15s' };
+      let color = 'rgba(255,255,255,.62)', icol = 'rgba(255,255,255,.42)';
+      if(isActive){
+        Object.assign(rowStyle, { background:'linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.05))', border:'1px solid rgba(255,255,255,.16)', boxShadow:'0 1px 0 rgba(255,255,255,.18) inset,0 10px 30px rgba(0,0,0,.5)' });
+        color = '#fff'; icol = '#fff';
+      } else if(hov){ rowStyle.background = 'rgba(255,255,255,.05)'; }
+      const rowKids = [
+        this.icon(it.icon, icol),
+        React.createElement('span', { key:'t', style:{ color, fontWeight:isActive?600:500, fontSize:15, flex:1 } }, it.label),
+      ];
+      if(it.children){
+        rowKids.push(React.createElement('svg', { key:'chv', width:14, height:14, viewBox:'0 0 24 24', fill:'none', stroke:'rgba(255,255,255,.4)', strokeWidth:2, strokeLinecap:'round', style:{ transform:isOpen?'rotate(180deg)':'none', transition:'transform .2s', flex:'none' } }, React.createElement('path', { d:'m6 9 6 6 6-6' })));
+      }
+      const rp = isActive ? { ref:this.activeRef } : {};
+      nodes.push(React.createElement('div', Object.assign({ key:it.id, style:rowStyle, onClick:()=> it.children ? this.toggle(it.id) : this.select(it.id), onMouseEnter:()=>this.setHover(it.id), onMouseLeave:()=>this.setHover(null) }, rp), rowKids));
+
+      if(it.children && isOpen){
+        const subs = it.children.map(ch => {
+          const sa = active === ch.id;
+          const sh = hovered === ch.id;
+          const sStyle = { display:'flex', alignItems:'center', gap:11, padding:'9px 14px', borderRadius:10, cursor:'pointer', marginBottom:1 };
+          if(sa) sStyle.background = 'rgba(255,255,255,.06)';
+          else if(sh) sStyle.background = 'rgba(255,255,255,.03)';
+          const dot = React.createElement('span', { key:'d', style:{ width:6, height:6, borderRadius:'50%', flex:'none', background:sa?'#fff':'rgba(255,255,255,.28)', boxShadow:sa?'0 0 8px 1px rgba(255,255,255,.7)':'none' } });
+          const txt = React.createElement('span', { key:'t', style:{ color:sa?'#fff':'rgba(255,255,255,.55)', fontWeight:sa?600:500, fontSize:13.5 } }, ch.label);
+          const srp = sa ? { ref:this.activeRef } : {};
+          return React.createElement('div', Object.assign({ key:ch.id, style:sStyle, onClick:()=>this.select(ch.id), onMouseEnter:()=>this.setHover(ch.id), onMouseLeave:()=>this.setHover(null) }, srp), [dot, txt]);
+        });
+        nodes.push(React.createElement('div', { key:it.id+'-sub', style:{ marginLeft:23, paddingLeft:9, borderLeft:'1px solid rgba(255,255,255,.08)', marginBottom:6, marginTop:2 } }, subs));
+      }
+    });
+
+    const sidebarNav = React.createElement('div', { style:{ display:'flex', flexDirection:'column', flex:1, minHeight:0, overflowY:'auto', marginBottom:14 } }, nodes);
+
+    const gt = this.state.glowTop;
+    const sidebarGlow = React.createElement(React.Fragment, null, [
+      React.createElement('div', { key:'g1', style:{ position:'absolute', left:296, top:gt, width:120, height:56, transform:'translate(-50%,-50%)', background:'radial-gradient(50% 50% at 50% 50%,rgba(255,255,255,.5),rgba(255,255,255,.12) 42%,transparent 72%)', pointerEvents:'none', filter:'blur(6px)', zIndex:4 } }),
+      React.createElement('div', { key:'g2', style:{ position:'absolute', left:296, top:gt, width:4, height:30, transform:'translate(-50%,-50%)', borderRadius:4, background:'#fff', boxShadow:'0 0 14px 4px rgba(255,255,255,.9)', pointerEvents:'none', zIndex:5 } }),
+    ]);
+
+    return { sidebarNav, sidebarGlow };
+  }
+}
+</script>
+</body>
+</html>

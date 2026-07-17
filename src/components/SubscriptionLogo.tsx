@@ -1,0 +1,21 @@
+import { useEffect, useState } from 'react'
+import { IconBarbell, IconCloud, IconReceipt, IconPhotoSearch, IconTrash } from '@tabler/icons-react'
+import type { Item } from '../lib/types'
+import { subscriptionLogos, type LogoSuggestion } from '../services/subscription-logos'
+import { useFinancas } from '../store/use-financas'
+
+export function SubscriptionLogo({item,size=36}:{item:Item;size?:number}){
+  const [src,setSrc]=useState(item.logo?.icon?subscriptionLogos.fallback(item.logo.icon):'')
+  useEffect(()=>{let live=true;if(item.logo?.file)void subscriptionLogos.source(item.logo.file,item.logo.icon).then(value=>{if(live)setSrc(value)});else setSrc('');return()=>{live=false}},[item.logo?.file,item.logo?.icon])
+  const normalized=item.label.toLowerCase()
+  const FallbackIcon=normalized.includes('academ')?IconBarbell:normalized.includes('icloud')||normalized.includes('nuvem')?IconCloud:IconReceipt
+  return <span className="grid shrink-0 place-items-center overflow-hidden rounded-[28%] border border-white/10 bg-el" style={{width:size,height:size}}>{src?<img src={src} alt={`Logo ${item.label}`} className="h-[72%] w-[72%] object-contain"/>:<FallbackIcon size={size*.52} stroke={1.7} className="text-t3"/>}</span>
+}
+
+export function SubscriptionEditor({item}:{item:Item}){
+  const mutate=useFinancas(s=>s.mutate);const [query,setQuery]=useState(item.label);const [results,setResults]=useState<LogoSuggestion[]>([]);const [loading,setLoading]=useState(false);const [searched,setSearched]=useState(false);const [saving,setSaving]=useState(false)
+  useEffect(()=>{if(query.trim().length<2){setResults([]);setSearched(false);return}const timer=setTimeout(()=>{setLoading(true);setSearched(false);subscriptionLogos.search(query).then(setResults).catch(()=>setResults([])).finally(()=>{setLoading(false);setSearched(true)})},350);return()=>clearTimeout(timer)},[query])
+  const choose=async(suggestion:LogoSuggestion)=>{setSaving(true);try{const file=await subscriptionLogos.save(item.id,suggestion.icon);mutate(d=>{const target=d.tabela.assinaturas.find(x=>x.id===item.id);if(target){target.label=query.trim()||suggestion.label;target.logo={icon:suggestion.icon,file}}});setResults([]);setSearched(false)}finally{setSaving(false)}}
+  const remove=async()=>{await subscriptionLogos.remove(item.logo?.file);mutate(d=>{d.tabela.assinaturas=d.tabela.assinaturas.filter(x=>x.id!==item.id)})}
+  return <div className="border-b border-border bg-el/60 p-3"><div className="flex items-center gap-3"><SubscriptionLogo item={item} size={44}/><div className="min-w-0 flex-1"><label className="text-[9px] font-bold uppercase tracking-[.7px] text-t3">Nome e logo colorida</label><div className="relative mt-1"><input value={query} onChange={e=>{const value=e.target.value;setQuery(value);mutate(d=>{const x=d.tabela.assinaturas.find(x=>x.id===item.id);if(x)x.label=value})}} placeholder="Ex.: YouTube, Spotify..." className="h-9 w-full rounded-lg border border-border bg-surface px-3 pr-9 text-xs outline-none focus:border-accent"/><IconPhotoSearch size={15} className="absolute right-3 top-2.5 text-t3"/></div></div><button onClick={remove} className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-red"><IconTrash size={15}/></button></div>{loading&&<p className="mt-2 text-[9px] text-t3">Buscando logos coloridas…</p>}{searched&&!loading&&results.length===0&&<p className="mt-2 rounded-lg border border-yellow/20 bg-yellow/5 px-3 py-2 text-[9px] text-yellow">Nenhuma versão colorida encontrada para esse nome.</p>}{results.length>0&&<div className="mt-2 grid grid-cols-4 gap-2 rounded-xl border border-border bg-surface p-2">{results.map(result=><button disabled={saving} key={result.icon} onClick={()=>void choose(result)} className="flex min-w-0 flex-col items-center gap-1 rounded-lg p-2 transition hover:bg-el disabled:opacity-50"><span className="grid h-9 w-9 place-items-center overflow-hidden rounded-[10px] bg-white p-1.5"><img src={result.preview} alt="" className="h-full w-full object-contain"/></span><span className="w-full truncate text-[8px] text-t2">{result.label}</span><span className="rounded bg-green/15 px-1 py-0.5 text-[6px] font-bold uppercase text-green">colorida</span></button>)}</div>}</div>
+}
