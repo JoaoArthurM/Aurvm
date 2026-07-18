@@ -32,8 +32,9 @@ export default function App() {
   const pages: Record<Tab, JSX.Element> = { inicio: <Dashboard />, tabela: <Tabela />, economia: <EconomiaPage />, emprestimos: <Emprestimos />, flux: <Flux />, config: loginVisible ? <Login /> : <Config /> }
   return <main className={cn('app-shell relative mx-auto h-[100dvh] w-full max-w-[390px] overflow-hidden bg-bg',loginVisible&&'login-shell')}>
     <span className="punch-hole" />
+    {!loginVisible&&<BrandAura />}
     <StatusBar />
-    <div className="app-scroll w-full overflow-x-hidden overflow-y-auto">{pages[tab]}</div>
+    <div className="app-scroll relative z-10 w-full overflow-x-hidden overflow-y-auto">{pages[tab]}</div>
     {!loginVisible&&<div className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 h-[120px]" style={{background:'linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0) 100%)'}}/>}
     {!loginVisible&&<nav className="bottom-nav absolute z-40 flex px-2 pt-[9px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
       {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] py-1 text-[9px] font-semibold transition duration-200 active:scale-95', tab === id ? (id === 'flux' ? 'bg-flux/10 text-flux' : 'bg-accent/10 text-accent') : 'text-t3')}>
@@ -41,6 +42,22 @@ export default function App() {
       </button>)}
     </nav>}
   </main>
+}
+
+function BrandAura() {
+  const rows = 7
+  const columns = 13
+  return <div className="app-aura" aria-hidden="true">
+    <div className="app-aura-dots">
+      {Array.from({ length: rows }, (_, row) => {
+        const progress = row / (rows - 1)
+        const size = 16 - progress * 11
+        return <div className="login-dot-row" key={row} style={{ top: `${row * 12}%`, opacity: 0.5 - progress * 0.32 }}>
+          {Array.from({ length: columns }, (_, column) => <i key={column} style={{ width: `${size}px`, height: `${size}px`, borderRadius: `${Math.max(1, size * 0.2)}px` }} />)}
+        </div>
+      })}
+    </div>
+  </div>
 }
 
 function StatusBar() {
