@@ -16,13 +16,13 @@ export const seedData: FinancasData = {
     { id: 'ec4', label: 'Reserva extra', valor: 500, tipo: 'parcelado', vezes: 6, mes: null },
   ],
   emprestimos: { pessoas: [
-    { id: 'p1', nome: 'Pedro', cor: '#1D4ED8', lancamentos: [{ id: 'l1', data: '2026-07-03', motivo: 'Passagens', valor: 500, pago: false }, { id: 'l2', data: '2026-06-18', motivo: 'Restaurante', valor: 200, pago: false }] },
-    { id: 'p2', nome: 'Fernanda', cor: '#9D174D', lancamentos: [{ id: 'l3', data: '2026-07-12', motivo: 'Hospedagem', valor: 800, pago: false }] },
-    { id: 'p3', nome: 'Carlos', cor: '#92400E', lancamentos: [{ id: 'l4', data: '2026-05-22', motivo: 'Ingresso', valor: 400, pago: false }] },
+    { id: 'p1', nome: 'Pedro', cor: '#3B82F6', lancamentos: [{ id: 'l1', data: '2026-07-03', motivo: 'Passagens', valor: 500, pago: false }, { id: 'l2', data: '2026-06-18', motivo: 'Restaurante', valor: 200, pago: false }] },
+    { id: 'p2', nome: 'Fernanda', cor: '#EC4899', lancamentos: [{ id: 'l3', data: '2026-07-12', motivo: 'Hospedagem', valor: 800, pago: false }] },
+    { id: 'p3', nome: 'Carlos', cor: '#F59E0B', lancamentos: [{ id: 'l4', data: '2026-05-22', motivo: 'Ingresso', valor: 400, pago: false }] },
   ] },
   flux: {
     valor_diario_planejado: 50,
-    tags: [{ id: 't1', label: 'Casa', cor: '#FF6A1A' }, { id: 't2', label: 'Comida', cor: '#FF6B35' }, { id: 't3', label: 'Transporte', cor: '#34D399' }, { id: 't4', label: 'Lazer', cor: '#FBBF24' }],
+    tags: [{ id: 't1', label: 'Casa', cor: '#5E86B8' }, { id: 't2', label: 'Comida', cor: '#C65F63' }, { id: 't3', label: 'Transporte', cor: '#2E9E5B' }, { id: 't4', label: 'Lazer', cor: '#EDA30D' }],
     lancamentos: [
       { id: 'fl1', data: '2026-07-01', tipo: 'entrada', valor: 4500, descricao: 'Bonfrigo PJ', tag_id: null },
       { id: 'fl2', data: '2026-07-02', tipo: 'saida', valor: 1200, descricao: 'Aluguel', tag_id: 't1' },

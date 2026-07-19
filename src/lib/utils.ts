@@ -30,7 +30,7 @@ export const totals = (data: FinancasData) => {
   return { entradas, fixos, variaveis, assinaturas, gastos, saldo: entradas - gastos - data.perfil.economia_mensal }
 }
 
-export type ProjectionPoint = { key: string; mes: string; entrou: number; acumulado: number; breakdown: { label: string; valor: number }[] }
+export type ProjectionPoint = { key: string; mes: string; entrou: number; acumulado: number; pontual: boolean; breakdown: { label: string; valor: number }[] }
 export const projectSavings = (data: FinancasData, months = 24): ProjectionPoint[] => {
   let accumulated = data.perfil.saldo_inicial
   const now = new Date()
@@ -40,7 +40,7 @@ export const projectSavings = (data: FinancasData, months = 24): ProjectionPoint
     const breakdown = [{ label: 'Economia mensal', valor: data.perfil.economia_mensal }, ...extras.map(({ label, valor }) => ({ label, valor }))]
     const entrou = breakdown.reduce((acc, item) => acc + item.valor, 0)
     accumulated += entrou
-    return { key, mes: monthLabel(key), entrou, acumulado: accumulated, breakdown }
+    return { key, mes: monthLabel(key), entrou, acumulado: accumulated, pontual: extras.some((item) => item.tipo === 'pontual'), breakdown }
   })
 }
 
@@ -51,11 +51,14 @@ const isEconomiaInMonth = (item: Economia, key: string, index: number) => {
 }
 
 export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: string }> = {
-  entrada: { label: 'Entradas', icon: '↙', color: '#34D399' },
-  saida: { label: 'Saídas', icon: '↗', color: '#FF6B35' },
-  diario: { label: 'Diários', icon: 'D', color: '#F472B6' },
-  economia: { label: 'Economia', icon: 'E', color: '#34D399' },
-  cartao: { label: 'Cartão', icon: 'C', color: '#FF6A1A' },
+  entrada: { label: 'Entradas', icon: '↙', color: '#2E9E5B' },
+  saida: { label: 'Saídas', icon: '↗', color: '#E14D4D' },
+  diario: { label: 'Diários', icon: 'D', color: '#E8618C' },
+  economia: { label: 'Economia', icon: 'E', color: '#2E9E5B' },
+  cartao: { label: 'Cartão', icon: 'C', color: '#8A78B5' },
 }
 
-export const saldoTemperature = (value: number) => value < 0 ? '#EF4444' : value < 500 ? '#FBBF24' : value < 2000 ? '#86EFAC' : '#34D399'
+export const saldoTemperature = (value: number) => value < 0 ? '#E14D4D' : value < 500 ? '#EDA30D' : value < 2000 ? '#63BE87' : '#2E9E5B'
+
+// Paleta única das categorias de orçamento — aquecida para conviver com o laranja da marca (que é exclusivo de ações/navegação).
+export const catColors = { entradas: '#2E9E5B', fixos: '#E14D4D', variaveis: '#EDA30D', assinaturas: '#8A78B5', economia: '#2E9E5B' } as const

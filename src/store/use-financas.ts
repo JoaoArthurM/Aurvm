@@ -11,6 +11,8 @@ type Store = {
   connected: boolean
   signedIn: boolean
   accountName: string | null
+  valuesHidden: boolean
+  toggleValues: () => void
   setTab: (tab: Tab) => void
   replaceData: (data: FinancasData) => void
   mutate: (recipe: (draft: FinancasData) => void) => void
@@ -25,6 +27,8 @@ let syncTimer: ReturnType<typeof setTimeout> | undefined
 
 export const useFinancas = create<Store>((set, get) => ({
   data: structuredClone(seedData), tab: 'inicio', syncStatus: 'local', connected: false, signedIn: true, accountName: null,
+  valuesHidden: false,
+  toggleValues: () => set((state) => ({ valuesHidden: !state.valuesHidden })),
   setTab: (tab) => set({ tab }),
   replaceData: (data) => set({ data }),
   mutate: (recipe) => {

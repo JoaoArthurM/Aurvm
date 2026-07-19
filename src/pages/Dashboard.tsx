@@ -1,21 +1,24 @@
 import { useState } from 'react'
-import { IconChartBubble, IconEye, IconEyeOff, IconLayoutGrid } from '@tabler/icons-react'
+import NumberFlow from '@number-flow/react'
+import { IconChartBubble, IconLayoutGrid } from '@tabler/icons-react'
 import { useFinancas } from '../store/use-financas'
-import { brl, money, sum, totals } from '../lib/utils'
+import { brl, catColors, money, sum, totals } from '../lib/utils'
 import { useSelic } from '../hooks/use-selic'
 import { SubscriptionLogo } from '../components/SubscriptionLogo'
 import { Greeting } from '../components/Greeting'
-import { Currency } from '../components/Currency'
+import { Currency, useAnimatedValue } from '../components/Currency'
+import { SunriseHero } from '../components/SunriseHero'
 
 function BrlStyled({value,numClass,symClass}:{value:number;numClass?:string;symClass?:string}){
+  const hidden=useFinancas(s=>s.valuesHidden)
+  const display=useAnimatedValue(value,hidden)
   const str=brl(value)
-  const idx=str.indexOf(' ')
+  const idx=str.search(/\s/)
   const sym=idx>-1?str.slice(0,idx):'R$'
-  const num=idx>-1?str.slice(idx+1):str
-  return <><span className={`font-extrabold opacity-50 ${symClass??''}`}>{sym}&nbsp;</span><span className={numClass}>{num}</span></>
+  return <><span className={`font-extrabold opacity-50 ${symClass??''}`}>{sym}&nbsp;</span>{hidden?<span className={`tracking-[.1em] ${numClass??''}`}>••••</span>:<NumberFlow value={display} locales="pt-BR" format={{minimumFractionDigits:2,maximumFractionDigits:2}} className={numClass}/>}</>
 }
 
-function SvgCurrency({value,suffix}:{value:number;suffix?:string}){return <><tspan fontSize=".7em" fontWeight="700" fillOpacity=".52">R$</tspan><tspan> {money(value)}{suffix}</tspan></>}
+function SvgCurrency({value,suffix}:{value:number;suffix?:string}){const hidden=useFinancas(s=>s.valuesHidden);return <><tspan fontSize=".7em" fontWeight="700" fillOpacity=".52">R$</tspan><tspan> {hidden?'••••':money(value)}{suffix}</tspan></>}
 
 export function Dashboard(){
  const data=useFinancas(s=>s.data);const t=totals(data)
@@ -31,44 +34,23 @@ export function Dashboard(){
 
 function HeroCard({saldo,entradas,gastos,fontes}:{saldo:number;entradas:number;gastos:number;fontes:number}){
  const selic=useSelic()
- const [hidden,setHidden]=useState(false)
- const mask='••••'
  const selicValue=selic.isLoading?'···':selic.isError?'N/D':`${selic.data?.toFixed(2).replace('.',',')}%`
  const kpis=[
-  {label:'Taxa Selic',value:selicValue,raw:null,sub:'a.a. · via BCB API',color:'text-accent',hide:false},
-  {label:'Entradas',value:null,raw:entradas,sub:`${fontes} fontes`,color:'text-green',hide:true},
-  {label:'Total gastos',value:null,raw:gastos,sub:`${entradas?(gastos/entradas*100).toFixed(1).replace('.',','):0}% da renda`,color:'text-red',hide:true},
+  {label:'Taxa Selic',value:selicValue,raw:null,sub:'a.a. · via BCB API',color:'text-accent'},
+  {label:'Entradas',value:null,raw:entradas,sub:`${fontes} fontes`,color:'text-green'},
+  {label:'Total gastos',value:null,raw:gastos,sub:`${entradas?(gastos/entradas*100).toFixed(1).replace('.',','):0}% da renda`,color:'text-red'},
  ]
- return <section className="mx-4 mb-[10px] rounded-[26px] border border-border bg-surface p-2.5 shadow-[0_8px_32px_rgba(0,0,0,.08)]">
-  {/* card interno — gradiente sutil: toque laranja no canto, dissolve em branco */}
-  <div className="relative overflow-hidden rounded-[18px]" style={{background:'linear-gradient(155deg,#FFAD62 0%,#FF6A1A 8%,#FF5F38 18%,#F8C8AF 38%,#F8F2EE 58%,#FAFAFA 100%)'}}>
-   <div className="relative">
-    <div className="flex items-center justify-between px-5 pb-2 pt-4">
-     <p className="text-[10px] font-bold uppercase tracking-[1.1px] text-white/70">Saldo líquido</p>
-     <button onClick={()=>setHidden(h=>!h)} className="grid h-7 w-7 place-items-center rounded-full bg-[#6F4B3D]/10 text-[#6F4B3D] transition active:scale-95">
-      {hidden?<IconEyeOff size={14}/>:<IconEye size={14}/>}
-     </button>
-    </div>
-    <div className="px-5 pb-5 pt-2">
-     <p className="number text-[48px] font-black leading-none tracking-[-2.5px]">{hidden?<span className="tracking-[4px] text-[32px] text-[#6F4B3D]">{mask}</span>:<BrlStyled value={saldo} symClass="text-[26px] text-[#5B382D]" numClass="text-[48px] text-[#30241F]"/>}</p>
-     <p className="mt-[7px] flex items-baseline gap-1 text-[11px] text-[#8B7167]">{hidden?<>{mask} entradas – {mask} gastos</>:<><Currency value={entradas}/> entradas <span>–</span> <Currency value={gastos}/> gastos</>}</p>
-    </div>
-   </div>
-  </div>
-  {/* KPIs — área branca fora do card interno */}
-  <div className="grid grid-cols-3 divide-x divide-border pt-1">
-   {kpis.map(({label,value,raw,sub,color,hide})=><div key={label} className="px-[10px] py-3">
-    <span className="block truncate text-[9px] font-semibold uppercase tracking-[.5px] text-t3">{label}</span>
-    <b className={`number mt-0.5 block truncate text-[13px] font-bold ${color}`}>{hidden&&hide?mask:raw!=null?<BrlStyled value={raw} numClass="text-[13px]" symClass="text-[10px] opacity-55"/>:value}</b>
-    <span className="mt-0.5 block truncate text-[9px] text-t3">{sub}</span>
-   </div>)}
-  </div>
- </section>
+ return <SunriseHero
+  label="Saldo líquido"
+  value={<BrlStyled value={saldo} symClass="text-[24px] text-[#5B382D]" numClass="text-[44px]"/>}
+  caption={<><Currency value={entradas}/> entradas <span>–</span> <Currency value={gastos}/> gastos</>}
+  kpis={kpis.map(({label,value,raw,sub,color})=>({label,sub,className:color,value:raw!=null?<BrlStyled value={raw} numClass="text-[13px]" symClass="text-[10px] opacity-55"/>:value}))}
+ />
 }
 
-function DonutCard({fixos,variaveis,assinaturas,economia,saldo}:{fixos:number;variaveis:number;assinaturas:number;economia:number;saldo:number}){const s=Math.max(saldo,0);const e=Math.max(economia,0);const pieTotal=fixos+variaveis+assinaturas+e||1;const legTotal=pieTotal+s||1;const a=fixos/pieTotal*100,b=a+variaveis/pieTotal*100,c=b+assinaturas/pieTotal*100;const gastos=[['Fixos',fixos,'#EF4444'],['Variáveis',variaveis,'#FB923C'],['Assinaturas',assinaturas,'#FBBF24'],['Economia',e,'#20A968']];return <section className="mx-4 mb-[10px] rounded-2xl border border-border bg-surface p-4"><p className="mb-3 text-[10px] font-bold uppercase tracking-[1px] text-t3">Distribuição dos gastos</p><div className="flex items-center gap-4"><div className="relative h-[108px] w-[108px] shrink-0 rounded-full" style={{background:`conic-gradient(#EF4444 0 ${a}%,#FB923C ${a}% ${b}%,#FBBF24 ${b}% ${c}%,#20A968 ${c}% 100%)`}}><div className="absolute inset-[22px] rounded-full bg-surface"/></div><div className="min-w-0 flex-1">{gastos.map(([label,value,color])=><div key={String(label)} className="mb-2 flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full" style={{background:String(color)}}/><span className="flex-1 text-xs text-t2">{label}</span><b className="number flex items-baseline gap-1 text-xs" style={{color:String(color)}}><BrlStyled value={Number(value)} numClass="text-xs" symClass="text-[10px] opacity-55"/><span className="opacity-25">|</span><small className="text-[10px] font-normal text-t3">{Math.round(Number(value)/legTotal*100)}%</small></b></div>)}<div className="mt-2 border-t border-border pt-2"><div className="flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full bg-t3"/><span className="flex-1 text-xs font-semibold text-t3">Saldo</span><b className="number flex items-baseline gap-1 text-xs text-t3"><BrlStyled value={s} numClass="text-xs text-t3" symClass="text-[10px] text-t3/60"/><span className="opacity-25">|</span><small className="text-[10px] font-semibold text-t3">100%</small></b></div></div></div></div></section>}
+function DonutCard({fixos,variaveis,assinaturas,economia,saldo}:{fixos:number;variaveis:number;assinaturas:number;economia:number;saldo:number}){const s=Math.max(saldo,0);const e=Math.max(economia,0);const pieTotal=fixos+variaveis+assinaturas+e||1;const legTotal=pieTotal+s||1;const a=fixos/pieTotal*100,b=a+variaveis/pieTotal*100,c=b+assinaturas/pieTotal*100;const gastos=[['Fixos',fixos,catColors.fixos],['Variáveis',variaveis,catColors.variaveis],['Assinaturas',assinaturas,catColors.assinaturas],['Economia',e,catColors.economia]];return <section className="card-glow mx-4 mb-[10px] rounded-2xl border border-border bg-surface p-4"><p className="mb-3 flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Distribuição dos gastos</p><div className="flex items-center gap-4"><div className="relative h-[108px] w-[108px] shrink-0 rounded-full" style={{background:`conic-gradient(${catColors.fixos} 0 ${a}%,${catColors.variaveis} ${a}% ${b}%,${catColors.assinaturas} ${b}% ${c}%,${catColors.economia} ${c}% 100%)`}}><div className="absolute inset-[22px] rounded-full bg-surface"/></div><div className="min-w-0 flex-1">{gastos.map(([label,value,color])=><div key={String(label)} className="mb-2 flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full" style={{background:String(color)}}/><span className="flex-1 text-xs text-t2">{label}</span><b className="number flex items-baseline gap-1 text-xs" style={{color:String(color)}}><BrlStyled value={Number(value)} numClass="text-xs" symClass="text-[10px] opacity-55"/><span className="opacity-25">|</span><small className="text-[10px] font-normal text-t3">{Math.round(Number(value)/legTotal*100)}%</small></b></div>)}<div className="mt-2 border-t border-border pt-2"><div className="flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full bg-t3"/><span className="flex-1 text-xs font-semibold text-t3">Saldo</span><b className="number flex items-baseline gap-1 text-xs text-t3"><BrlStyled value={s} numClass="text-xs text-t3" symClass="text-[10px] text-t3/60"/><span className="opacity-25">|</span><small className="text-[10px] font-semibold text-t3">100%</small></b></div></div></div></div></section>}
 
-function SankeyCard({data}:{data:ReturnType<typeof useFinancas.getState>['data']}){const t=totals(data);const sources=data.tabela.entradas;const sourceTotal=Math.max(t.entradas,1);const economia=Math.max(data.perfil.economia_mensal,0);const flows=[['Fixos',t.fixos,'#EF4444'],['Variáveis',t.variaveis,'#FB923C'],['Assinaturas',t.assinaturas,'#FBBF24'],['Economia',economia,'#20A968']];const H=240;const srcH=flows.reduce((s,[,v])=>s+Number(v)/sourceTotal*H,0);const svgH=18+flows.reduce((acc,[,v])=>acc+Math.max(8,Number(v)/sourceTotal*H)+5,0)-5+8;let dy=18,ldy=0;return <section className="mx-4 mb-[10px] overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-3 pt-[14px]"><p className="mb-[10px] text-[10px] font-bold uppercase tracking-[1px] text-t3">Fluxo · Entradas e Saídas</p><svg viewBox={`0 0 340 ${svgH}`} className="w-full"><g><rect x="60" y="18" width="14" height={srcH} rx="3" fill="#20A968"/><text x="57" y={18+srcH/2-5} textAnchor="end" fontSize="10" fill="#6F6761" fontWeight="700">Entradas</text><text x="57" y={18+srcH/2+9} textAnchor="end" fontSize="9" fill="#20A968"><SvgCurrency value={t.entradas}/></text></g>{flows.map(([label,value,color])=>{const num=Number(value);const lh=num/sourceTotal*H;const rh=Math.max(8,lh);const ly=18+ldy;const ry=dy;ldy+=lh;dy+=rh+5;return <g key={String(label)}><path d={`M74,${ly} C120,${ly} 212,${ry} 268,${ry} L268,${ry+rh} C212,${ry+rh} 120,${ly+lh} 74,${ly+lh} Z`} fill={String(color)} opacity=".22"/><rect x="268" y={ry} width="14" height={rh} rx="2" fill={String(color)}/><text x="284" y={ry+rh/2-2} fontSize="10" fill={String(color)} fontWeight="700">{label}</text><text x="284" y={ry+rh/2+10} fontSize="9" fill={String(color)}><SvgCurrency value={num}/></text></g>})}</svg></section>}
+function SankeyCard({data}:{data:ReturnType<typeof useFinancas.getState>['data']}){const t=totals(data);const sources=data.tabela.entradas;const sourceTotal=Math.max(t.entradas,1);const economia=Math.max(data.perfil.economia_mensal,0);const flows=[['Fixos',t.fixos,catColors.fixos],['Variáveis',t.variaveis,catColors.variaveis],['Assinaturas',t.assinaturas,catColors.assinaturas],['Economia',economia,catColors.economia]];const H=240;const srcH=flows.reduce((s,[,v])=>s+Number(v)/sourceTotal*H,0);const svgH=18+flows.reduce((acc,[,v])=>acc+Math.max(8,Number(v)/sourceTotal*H)+5,0)-5+8;let dy=18,ldy=0;return <section className="card-glow mx-4 mb-[10px] overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-3 pt-[14px]"><p className="mb-[10px] flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Fluxo · Entradas e Saídas</p><svg viewBox={`0 0 340 ${svgH}`} className="w-full"><g><rect x="60" y="18" width="14" height={srcH} rx="3" fill={catColors.entradas}/><text x="57" y={18+srcH/2-5} textAnchor="end" fontSize="10" fill="#6F6761" fontWeight="700">Entradas</text><text x="57" y={18+srcH/2+9} textAnchor="end" fontSize="9" fill={catColors.entradas}><SvgCurrency value={t.entradas}/></text></g>{flows.map(([label,value,color])=>{const num=Number(value);const lh=num/sourceTotal*H;const rh=Math.max(8,lh);const ly=18+ldy;const ry=dy;ldy+=lh;dy+=rh+5;return <g key={String(label)}><path d={`M74,${ly} C120,${ly} 212,${ry} 268,${ry} L268,${ry+rh} C212,${ry+rh} 120,${ly+lh} 74,${ly+lh} Z`} fill={String(color)} opacity=".22"/><rect x="268" y={ry} width="14" height={rh} rx="2" fill={String(color)}/><text x="284" y={ry+rh/2-2} fontSize="10" fill={String(color)} fontWeight="700">{label}</text><text x="284" y={ry+rh/2+10} fontSize="9" fill={String(color)}><SvgCurrency value={num}/></text></g>})}</svg></section>}
 
 function EconomyScale({income,current}:{income:number;current:number}){
   const targets=[20,25,30]
@@ -78,9 +60,9 @@ function EconomyScale({income,current}:{income:number;current:number}){
   const progress=Math.max(0,Math.min(100,pct/30*100))
   const tone=pct<20?'#B65C5C':pct<25?'#B88624':'#238A5B'
 
-  return <section className="mx-4 mb-[10px] overflow-hidden rounded-[22px] border border-border bg-surface shadow-[0_8px_28px_rgba(55,35,20,.04)]">
+  return <section className="card-glow mx-4 mb-[10px] overflow-hidden rounded-[22px] border border-border bg-surface">
     <div className="flex items-center px-4 pb-3 pt-4">
-      <div><h2 className="font-sans text-[10px] font-bold uppercase tracking-[1px] text-t3">Escala de economia</h2><p className="mt-0.5 text-[11px] text-t3">Metas calculadas sobre a sua renda</p></div>
+      <div><h2 className="flex items-center font-sans text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Escala de economia</h2><p className="mt-0.5 text-[11px] text-t3">Metas calculadas sobre a sua renda</p></div>
       <span className="ml-auto flex items-baseline gap-1 font-mono text-[9px] text-t3">base <Currency value={income}/></span>
     </div>
 
@@ -117,12 +99,12 @@ function Subscriptions(){
   const items=useFinancas(s=>s.data.tabela.assinaturas)
   const [mode,setMode]=useState<'grid'|'bubble'>('grid')
   const total=sum(items)
-  const colors=['#8A78B5','#C65F63','#238A5B','#5E86B8']
+  const colors=['#8B5CF6','#F43F5E','#10B981','#3B82F6']
   const summaries=[['Total/mês',total],['Trimestral',total*3],['Anual',total*12]] as const
 
-  return <section className="mx-4 mb-3 rounded-[22px] border border-border bg-surface p-3 shadow-[0_8px_28px_rgba(55,35,20,.04)]">
+  return <section className="card-glow mx-4 mb-3 rounded-[22px] border border-border bg-surface p-3">
     <div className="flex items-start justify-between px-1 pb-3 pt-1">
-      <div><p className="text-[10px] font-bold uppercase tracking-[1px] text-t3">Assinaturas</p><p className="mt-0.5 text-[11px] text-t3">Distribuição dos serviços ativos</p></div>
+      <div><p className="flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Assinaturas</p><p className="mt-0.5 text-[11px] text-t3">Distribuição dos serviços ativos</p></div>
       <span className="rounded-full bg-el px-2.5 py-1 font-mono text-[9px] font-bold text-t2">{items.length} ativas</span>
     </div>
 
@@ -153,8 +135,8 @@ function Treemap({items,colors}:{items:{id:string;label:string;valor:number;logo
     <defs><clipPath id="subscriptions-treemap"><rect width="320" height={canvasHeight} rx="16"/></clipPath></defs>
     <g clipPath="url(#subscriptions-treemap)">
       <rect width={primaryWidth} height={canvasHeight} fill={colors[0]}/>
-      {first&&<><foreignObject x={primaryWidth/2-21} y={canvasHeight/2-52} width="42" height="42"><SubscriptionLogo item={first} size={42}/></foreignObject><text x={primaryWidth/2} y={canvasHeight/2+13} textAnchor="middle" fill="white" fontSize="12" fontWeight="700">{first.label}</text><text x={primaryWidth/2} y={canvasHeight/2+30} textAnchor="middle" fill="white" fillOpacity=".8" fontSize="9"><SvgCurrency value={first.valor} suffix={` · ${Math.round(first.valor/total*100)}%`}/></text></>}
-      {secondary.map((item,index)=>{const y=heights.slice(0,index).reduce((acc,height)=>acc+height,0);const height=heights[index];const centerX=primaryWidth+rightWidth/2;const iconSize=height>=78?28:24;return <g key={item.id}><rect x={primaryWidth} y={y} width={rightWidth} height={height} fill={colors[(index+1)%colors.length]} stroke="rgba(255,255,255,.34)" strokeWidth="1.5"/><foreignObject x={centerX-iconSize/2} y={y+height/2-25} width={iconSize} height={iconSize}><SubscriptionLogo item={item} size={iconSize}/></foreignObject><text x={centerX} y={y+height/2+12} textAnchor="middle" fill="white" fontSize="9" fontWeight="700">{item.label}</text><text x={centerX} y={y+height/2+24} textAnchor="middle" fill="white" fillOpacity=".76" fontSize="7.5"><SvgCurrency value={item.valor} suffix={` · ${Math.round(item.valor/total*100)}%`}/></text></g>})}
+      {first&&<><foreignObject x={primaryWidth/2-21} y={canvasHeight/2-52} width="42" height="42"><SubscriptionLogo item={first} size={42} frosted/></foreignObject><text x={primaryWidth/2} y={canvasHeight/2+13} textAnchor="middle" fill="white" fontSize="12" fontWeight="700">{first.label}</text><text x={primaryWidth/2} y={canvasHeight/2+30} textAnchor="middle" fill="white" fillOpacity=".8" fontSize="9"><SvgCurrency value={first.valor} suffix={` · ${Math.round(first.valor/total*100)}%`}/></text></>}
+      {secondary.map((item,index)=>{const y=heights.slice(0,index).reduce((acc,height)=>acc+height,0);const height=heights[index];const centerX=primaryWidth+rightWidth/2;const iconSize=height>=78?28:24;return <g key={item.id}><rect x={primaryWidth} y={y} width={rightWidth} height={height} fill={colors[(index+1)%colors.length]} stroke="rgba(255,255,255,.34)" strokeWidth="1.5"/><foreignObject x={centerX-iconSize/2} y={y+height/2-25} width={iconSize} height={iconSize}><SubscriptionLogo item={item} size={iconSize} frosted/></foreignObject><text x={centerX} y={y+height/2+12} textAnchor="middle" fill="white" fontSize="9" fontWeight="700">{item.label}</text><text x={centerX} y={y+height/2+24} textAnchor="middle" fill="white" fillOpacity=".76" fontSize="7.5"><SvgCurrency value={item.valor} suffix={` · ${Math.round(item.valor/total*100)}%`}/></text></g>})}
     </g>
   </svg>
 }
@@ -176,7 +158,7 @@ function Bubbles({items,colors}:{items:{id:string;label:string;valor:number;logo
     const iconSize=Math.max(18,Math.min(30,radius*.52))
     return <g key={item.id}>
       <circle cx={x} cy={y} r={radius} fill={colors[index%colors.length]} stroke="rgba(255,255,255,.42)" strokeWidth="1"/>
-      <foreignObject x={x-iconSize/2} y={y-radius*.52} width={iconSize} height={iconSize}><SubscriptionLogo item={item} size={iconSize}/></foreignObject>
+      <foreignObject x={x-iconSize/2} y={y-radius*.52} width={iconSize} height={iconSize}><SubscriptionLogo item={item} size={iconSize} frosted/></foreignObject>
       <text x={x} y={y+radius*.27} textAnchor="middle" fill="white" fontSize={radius<40?8:9} fontWeight="700">{item.label}</text>
       <text x={x} y={y+radius*.52} textAnchor="middle" fill="white" fillOpacity=".78" fontSize="7.5"><SvgCurrency value={item.valor}/></text>
     </g>

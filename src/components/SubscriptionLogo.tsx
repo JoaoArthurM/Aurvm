@@ -4,12 +4,12 @@ import type { Item } from '../lib/types'
 import { subscriptionLogos, type LogoSuggestion } from '../services/subscription-logos'
 import { useFinancas } from '../store/use-financas'
 
-export function SubscriptionLogo({item,size=36}:{item:Item;size?:number}){
+export function SubscriptionLogo({item,size=36,frosted=false}:{item:Item;size?:number;frosted?:boolean}){
   const [src,setSrc]=useState(item.logo?.icon?subscriptionLogos.fallback(item.logo.icon):'')
   useEffect(()=>{let live=true;if(item.logo?.file)void subscriptionLogos.source(item.logo.file,item.logo.icon).then(value=>{if(live)setSrc(value)});else setSrc('');return()=>{live=false}},[item.logo?.file,item.logo?.icon])
   const normalized=item.label.toLowerCase()
   const FallbackIcon=normalized.includes('academ')?IconBarbell:normalized.includes('icloud')||normalized.includes('nuvem')?IconCloud:IconReceipt
-  return <span className="grid shrink-0 place-items-center overflow-hidden rounded-[28%] border border-white/10 bg-el" style={{width:size,height:size}}>{src?<img src={src} alt={`Logo ${item.label}`} className="h-[72%] w-[72%] object-contain"/>:<FallbackIcon size={size*.52} stroke={1.7} className="text-t3"/>}</span>
+  return <span className={`grid shrink-0 place-items-center overflow-hidden rounded-[28%] border ${frosted?'border-white/30 bg-white/20 backdrop-blur-sm':'border-white/10 bg-el'}`} style={{width:size,height:size}}>{src?<img src={src} alt={`Logo ${item.label}`} className="h-[72%] w-[72%] object-contain"/>:<FallbackIcon size={size*.52} stroke={1.7} className={frosted?'text-white/85':'text-t3'}/>}</span>
 }
 
 export function SubscriptionEditor({item}:{item:Item}){

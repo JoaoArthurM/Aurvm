@@ -7,23 +7,36 @@ import {
 import { Currency } from '../components/Currency'
 import { PageHeader } from '../components/PageHeader'
 import { AddButton, Button, Card, Input, MoneyInput } from '../components/ui'
+import { SunriseHero } from '../components/SunriseHero'
 import type { Pessoa } from '../lib/types'
 import { cn, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 
 const paidGreen = '#238A5B'
-const deleteRed = '#D84A4A'
+const deleteRed = '#E14D4D'
 
 export function Emprestimos() {
   const { data, mutate } = useFinancas()
   const [active, setActive] = useState(data.emprestimos.pessoas[0]?.id ?? '')
   const [adding, setAdding] = useState(false)
-  const pending = data.emprestimos.pessoas.flatMap((person) => person.lancamentos).filter((loan) => !loan.pago)
+  const allLoans = data.emprestimos.pessoas.flatMap((person) => person.lancamentos)
+  const pending = allLoans.filter((loan) => !loan.pago)
+  const received = allLoans.filter((loan) => loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
   const total = pending.reduce((sum, loan) => sum + loan.valor, 0)
 
   return (
     <div className="page">
-      <PageHeader title="Empréstimos" subtitle="toque no nome para ver os detalhes" />
+      <PageHeader eyebrow="Contas a receber" title="Empréstimos" subtitle="toque no nome para ver os detalhes" />
+      <SunriseHero
+        label="Total a receber"
+        value={<Currency value={total} />}
+        caption={<>{data.emprestimos.pessoas.length} pessoas <span>·</span> {pending.length} lançamentos pendentes</>}
+        kpis={[
+          { label: 'Pessoas', value: String(data.emprestimos.pessoas.length), sub: 'com lançamentos' },
+          { label: 'Pendentes', value: String(pending.length), sub: 'a receber', className: 'text-red' },
+          { label: 'Recebido', value: <Currency value={received} />, sub: 'já pago', className: 'text-green' },
+        ]}
+      />
       <div className="space-y-[10px] px-4">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {data.emprestimos.pessoas.map((person) => {
@@ -61,16 +74,6 @@ export function Emprestimos() {
           })}
         </div>
 
-        <Card className="flex items-center justify-between border-accent/30 bg-accent/15 px-4 py-3">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[.8px] text-t3">Total a receber</p>
-            <Currency value={total} className="mt-1 text-[26px] font-black tracking-[-1.5px] text-accent" />
-          </div>
-          <p className="text-right text-[10px] text-t3">
-            {data.emprestimos.pessoas.length} pessoas · {pending.length} lançamentos
-          </p>
-        </Card>
-
         <section>
           <div className="space-y-[10px]">
             {data.emprestimos.pessoas.map((person) => <PersonCard key={person.id} person={person} />)}
@@ -88,7 +91,7 @@ export function Emprestimos() {
                   mutate((draft) => draft.emprestimos.pessoas.push({
                     id: uid(),
                     nome: name,
-                    cor: ['#7B5CF6', '#34D399', '#FBBF24', '#FF6B35'][draft.emprestimos.pessoas.length % 4],
+                    cor: ['#8B5CF6', '#10B981', '#F59E0B', '#3B82F6'][draft.emprestimos.pessoas.length % 4],
                     lancamentos: [],
                   }))
                   setAdding(false)
@@ -204,7 +207,7 @@ function PersonCard({ person }: { person: Pessoa }) {
             <NewLoan personId={person.id} done={() => setAdding(false)} />
           ) : (
             <div className="mt-3 flex justify-end">
-              <AddButton color={person.cor} onClick={() => setAdding(true)}>Adicionar lançamento</AddButton>
+              <AddButton onClick={() => setAdding(true)}>Adicionar lançamento</AddButton>
             </div>
           )}
         </div>

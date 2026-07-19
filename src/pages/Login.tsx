@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconArrowRight, IconLoader2 } from '@tabler/icons-react'
+import { IconArrowRight, IconLoader2, IconShieldCheck } from '@tabler/icons-react'
 import { useFinancas } from '../store/use-financas'
 
 function GoogleMark(){
@@ -16,12 +16,12 @@ function GoogleWord(){
 }
 
 function LoginTexture(){
-  const rows=18
+  const rows=14
   const columns=13
   return <div className="login-dots" aria-hidden="true">{Array.from({length:rows},(_,row)=>{
     const progress=row/(rows-1)
-    const size=18.5-(progress*16)
-    return <div className="login-dot-row" key={row} style={{top:`${row*5.1}%`,opacity:.4-(progress*.2)}}>{Array.from({length:columns},(_,column)=><i key={column} style={{width:`${size}px`,height:`${size}px`,borderRadius:`${Math.max(1.2,size*.2)}px`}}/>)}</div>
+    const size=16-(progress*13)
+    return <div className="login-dot-row" key={row} style={{top:`${4+row*6.4}%`,opacity:.5-(progress*.28)}}>{Array.from({length:columns},(_,column)=><i key={column} style={{width:`${size}px`,height:`${size}px`,borderRadius:`${Math.max(1.2,size*.22)}px`}}/>)}</div>
   })}</div>
 }
 
@@ -29,5 +29,22 @@ export function Login(){
   const loginDemo=useFinancas(s=>s.loginDemo)
   const [loading,setLoading]=useState(false)
   const signIn=async()=>{setLoading(true);await new Promise(resolve=>setTimeout(resolve,450));loginDemo()}
-  return <div className="login-screen relative min-h-full overflow-hidden text-[#111116]"><LoginTexture/><div className="login-ambient"/><section className="absolute inset-x-0 bottom-[150px] z-10 px-6"><div className="mb-4 flex items-center gap-2.5"><span className="text-[14px] font-bold uppercase tracking-[2.5px] text-black/55">Aurvm</span><span className="app-mark-ring"><img src="/aurvm-icon.svg" alt="Ícone Aurvm" className="h-10 w-10 rounded-[12px] shadow-[0_7px_22px_rgba(17,17,22,.2)]"/></span></div><h1 className="max-w-[335px] text-[39px] font-medium leading-[1.08] tracking-[-2.4px] text-[#111116]">Sua vida financeira<br/>construída ao seu redor.</h1></section><button disabled={loading} onClick={signIn} className="login-cta group absolute inset-x-6 bottom-8 z-20 flex items-center justify-between border-t border-black/10 pt-5 text-left disabled:opacity-50"><span><b className="flex items-center gap-2 text-[14px] font-semibold"><GoogleMark/><span>Continuar com <GoogleWord/></span></b><small className="mt-1 block pl-[26px] text-[10px] text-black/35">Entrar no aplicativo</small></span><span className="login-arrow">{loading?<IconLoader2 size={19} className="animate-spin"/>:<IconArrowRight size={20}/>}</span></button></div>
+  return <div className="page flex h-full flex-col bg-bg px-4 pb-6 pt-1">
+    <div className="login-sunrise login-sunrise-shadow relative min-h-0 flex-1 overflow-hidden rounded-[30px] border border-border">
+      <LoginTexture/>
+      <div className="absolute inset-x-5 bottom-5 flex items-center gap-2.5">
+        <img src="/aurvm-icon.svg" alt="Ícone Aurvm" className="h-10 w-10 rounded-[12px] shadow-[0_7px_22px_rgba(17,17,22,.25)]"/>
+        <span className="text-[11px] font-bold uppercase tracking-[2.5px] text-[#6F4B3D]/85">Aurvm</span>
+      </div>
+    </div>
+    <section className="px-2 pb-6 pt-6">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[.18em] text-accent">Gestão financeira pessoal</p>
+      <h1 className="font-display text-[30px] font-semibold leading-[1.08] tracking-[-1.4px] text-t1">Sua vida financeira<br/>construída ao seu redor.</h1>
+    </section>
+    <button disabled={loading} onClick={signIn} className="flex w-full shrink-0 items-center justify-between rounded-[18px] border border-border bg-surface py-2 pl-4 pr-2 text-left shadow-[0_10px_28px_rgba(55,35,20,.06)] transition active:scale-[.98] disabled:opacity-50">
+      <span className="flex items-center gap-2.5 text-[13px] font-semibold text-t1"><GoogleMark/><span>Continuar com <GoogleWord/></span></span>
+      <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-accent/10 text-accent">{loading?<IconLoader2 size={18} className="animate-spin"/>:<IconArrowRight size={18}/>}</span>
+    </button>
+    <p className="mt-3 flex items-center justify-center gap-1.5 text-[9px] text-t3"><IconShieldCheck size={12} className="shrink-0 text-accent"/>Seus dados ficam no seu Google Drive · escopo privado</p>
+  </div>
 }

@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import {
-  IconArrowDown, IconArrowUp, IconBell, IconChevronRight, IconDeviceMobile, IconEye,
+  IconArrowDown, IconArrowUp, IconBell, IconChevronRight, IconDeviceMobile, IconEyeCheck,
   IconEyeOff, IconInfoCircle, IconLayoutNavbar, IconLogout, IconMoon, IconPalette,
   IconRefresh, IconShieldCheck, IconSun, IconUser,
 } from '@tabler/icons-react'
+import { PageHeader } from '../components/PageHeader'
 import { Button, Card, Toggle } from '../components/ui'
 import { cn } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
@@ -35,11 +36,7 @@ export function Config(){
   })
 
   return <div className="page min-h-full pb-4 font-sans">
-    <header className="px-5 pb-5 pt-4">
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[.18em] text-accent">Preferências</p>
-      <h1 className="font-display text-[30px] font-semibold leading-none tracking-[-1.4px] text-t1">Configurações</h1>
-      <p className="mt-2 text-[12px] text-t2">Deixe o Aurvm com a sua cara.</p>
-    </header>
+    <PageHeader eyebrow="Preferências" title="Configurações" subtitle="Deixe o Aurvm com a sua cara."/>
 
     <div className="space-y-5 px-4">
       <ConfigSection icon={<GoogleDriveMark className="h-4 w-[18px]"/>} title="Conta e dados">
@@ -77,7 +74,7 @@ export function Config(){
             const locked=item.id==='config'
             return <div key={item.id} className={cn('flex items-center border-b border-border px-3 py-3 last:border-0',!item.visivel&&'opacity-55')}>
               <button type="button" disabled={locked} onClick={()=>toggleNavigation(item.id)} aria-label={item.visivel?`Ocultar ${navigationLabels[item.id]}`:`Mostrar ${navigationLabels[item.id]}`} className={cn('mr-3 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition',item.visivel?'bg-[#238A5B]/10 text-[#238A5B]':'bg-el text-t3',locked&&'cursor-not-allowed')}>
-                {item.visivel?<IconEye size={17}/>:<IconEyeOff size={17}/>} 
+                {item.visivel?<IconEyeCheck size={17}/>:<IconEyeOff size={17}/>}
               </button>
               <div className="min-w-0 flex-1"><p className="text-[12px] font-semibold text-t1">{navigationLabels[item.id]}</p><p className="mt-0.5 text-[9px] text-t3">{locked?'Sempre visível':item.visivel?'Visível no menu':'Oculta do menu'}</p></div>
               <div className="flex gap-1">
