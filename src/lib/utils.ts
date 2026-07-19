@@ -58,7 +58,22 @@ export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: st
   cartao: { label: 'Cartão', icon: 'C', color: '#8A78B5' },
 }
 
-export const saldoTemperature = (value: number) => value < 0 ? '#E14D4D' : value < 500 ? '#EDA30D' : value < 2000 ? '#63BE87' : '#2E9E5B'
+// Escala de temperatura da planilha de saldos — 7 faixas com as cores da planilha do usuário (Google Sheets).
+// As cores são fixas; os 6 limites entre faixas são editáveis em flux.temperatura.limites (base: salário da pessoa).
+export type TemperaturaLimites = number[]
+export const tempTiers = [
+  { label: 'Muito Negativo', bg: '#B7432D', fg: '#FFFFFF' },
+  { label: 'Negativo', bg: '#F4CCCC', fg: '#A61C00' },
+  { label: 'Cuidado', bg: '#FFF2CC', fg: '#B45F06' },
+  { label: 'Muita Atenção', bg: '#FFF2CC', fg: '#E69138' },
+  { label: 'Atenção', bg: '#FFE599', fg: '#7F6000' },
+  { label: 'Saudável', bg: '#D9EAD3', fg: '#38761D' },
+  { label: 'Muito Saudável', bg: '#38761D', fg: '#FFFFFF' },
+] as const
+export const defaultLimites: TemperaturaLimites = [-100, 0, 100, 300, 1000, 2000]
+export const getLimites = (t?: { limites?: number[] }): TemperaturaLimites => Array.isArray(t?.limites) && t.limites.length === tempTiers.length - 1 ? t.limites : defaultLimites
+export const saldoTier = (value: number, limites: TemperaturaLimites = defaultLimites) => { if (value <= limites[0]) return 0; let tier = 1; for (let i = 1; i < limites.length; i++) if (value >= limites[i]) tier = i + 1; return tier }
+export const saldoStyle = (value: number, limites?: TemperaturaLimites) => { const tier = tempTiers[saldoTier(value, limites)]; return { background: tier.bg, color: tier.fg } }
 
 // Paleta única das categorias de orçamento — aquecida para conviver com o laranja da marca (que é exclusivo de ações/navegação).
 export const catColors = { entradas: '#2E9E5B', fixos: '#E14D4D', variaveis: '#EDA30D', assinaturas: '#8A78B5', economia: '#2E9E5B' } as const

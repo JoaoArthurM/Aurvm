@@ -22,6 +22,8 @@ export const seedData: FinancasData = {
   ] },
   flux: {
     valor_diario_planejado: 50,
+    cartoes: [{ id: 'c1', nome: 'Itaú', fechamento: 8, vencimento: 10 }],
+    temperatura: { limites: [-100, 0, 100, 300, 1000, 2000] },
     tags: [{ id: 't1', label: 'Casa', cor: '#5E86B8' }, { id: 't2', label: 'Comida', cor: '#C65F63' }, { id: 't3', label: 'Transporte', cor: '#2E9E5B' }, { id: 't4', label: 'Lazer', cor: '#EDA30D' }],
     lancamentos: [
       { id: 'fl1', data: '2026-07-01', tipo: 'entrada', valor: 4500, descricao: 'Bonfrigo PJ', tag_id: null },
