@@ -34,7 +34,7 @@ export default function App() {
     <div className="app-scroll w-full overflow-x-hidden overflow-y-auto">{pages[tab]}</div>
     {!loginVisible&&<div className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 h-[120px]" style={{background:'linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0) 100%)'}}/>}
     {!loginVisible&&<nav className="bottom-nav absolute z-40 flex px-2 pt-[9px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
-      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] py-1 text-[9px] font-semibold transition duration-200 active:scale-95', tab === id ? (id === 'flux' ? 'bg-flux/10 text-flux' : 'bg-accent/10 text-accent') : 'text-t3')}>
+      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] py-1 text-[9px] font-semibold transition duration-200 active:scale-95', tab === id ? (id === 'flux' ? 'text-flux' : 'text-accent') : 'text-t3')}>
         <Icon size={18} strokeWidth={2} /><span>{label}</span>
       </button>)}
     </nav>}

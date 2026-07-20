@@ -4,7 +4,8 @@ export type LancamentoPessoa = { id: string; data: string; motivo: string; valor
 export type Pessoa = { id: string; nome: string; cor: string; lancamentos: LancamentoPessoa[] }
 export type Tag = { id: string; label: string; cor: string; oculta?: boolean }
 export type FluxTipo = 'entrada' | 'saida' | 'diario' | 'economia' | 'cartao'
-export type FluxLancamento = { id: string; data: string; tipo: FluxTipo; valor: number; descricao: string; tag_id: string | null }
+// repete: recorrência mensal a partir de `data` — vezes = total de ocorrências (incluindo a primeira); null = sem definição (repete para sempre).
+export type FluxLancamento = { id: string; data: string; tipo: FluxTipo; valor: number; descricao: string; tag_id: string | null; repete?: { vezes: number | null } | null }
 export type Cartao = { id: string; nome: string; fechamento: number; vencimento: number }
 export type Tab = 'inicio' | 'tabela' | 'economia' | 'emprestimos' | 'flux' | 'config'
 export type NavigationPreference = { id: Tab; visivel: boolean }

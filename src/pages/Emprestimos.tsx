@@ -6,7 +6,7 @@ import {
 } from '@tabler/icons-react'
 import { Currency } from '../components/Currency'
 import { PageHeader } from '../components/PageHeader'
-import { AddButton, Button, Card, Input, MoneyInput } from '../components/ui'
+import { AddButton, Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
 import { SunriseHero } from '../components/SunriseHero'
 import type { Pessoa } from '../lib/types'
 import { cn, uid } from '../lib/utils'
@@ -206,7 +206,15 @@ function PersonCard({ person }: { person: Pessoa }) {
           {adding ? (
             <NewLoan personId={person.id} done={() => setAdding(false)} />
           ) : (
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex items-center justify-between">
+              <DangerButton
+                aria-label={`Excluir ${person.nome}`}
+                onClick={() => mutate((draft) => {
+                  draft.emprestimos.pessoas = draft.emprestimos.pessoas.filter((item) => item.id !== person.id)
+                })}
+              >
+                Excluir pessoa
+              </DangerButton>
               <AddButton onClick={() => setAdding(true)}>Adicionar lançamento</AddButton>
             </div>
           )}

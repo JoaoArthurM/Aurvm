@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { Economia, FinancasData, FluxTipo } from './types'
+import type { Economia, FinancasData, FluxLancamento, FluxTipo } from './types'
 
 export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs))
 const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -48,6 +48,28 @@ const isEconomiaInMonth = (item: Economia, key: string, index: number) => {
   if (item.tipo === 'recorrente') return true
   if (item.tipo === 'parcelado') return index < (item.vezes ?? 0)
   return item.mes === key
+}
+
+// Recorrência de lançamentos do Flux: repetem mensalmente no mesmo dia (limitado ao último dia do mês).
+// diff em meses desde a data original; vezes = total de ocorrências, null = sem fim.
+const monthDiff = (l: FluxLancamento, year: number, month: number) => {
+  const [ly, lm] = l.data.split('-').map(Number)
+  return (year - ly) * 12 + (month - lm)
+}
+export const ocorreNoMes = (l: FluxLancamento, key: string) => {
+  const [y, m] = key.split('-').map(Number)
+  const diff = monthDiff(l, y, m)
+  if (diff === 0) return true
+  if (!l.repete || diff < 0) return false
+  return l.repete.vezes == null || diff < l.repete.vezes
+}
+export const ocorreEm = (l: FluxLancamento, date: string) => {
+  if (l.data === date) return true
+  if (!l.repete) return false
+  const [y, m, d] = date.split('-').map(Number)
+  if (!ocorreNoMes(l, date.slice(0, 7)) || monthDiff(l, y, m) <= 0) return false
+  const dia = Number(l.data.slice(8, 10))
+  return d === Math.min(dia, new Date(y, m, 0).getDate())
 }
 
 export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: string }> = {

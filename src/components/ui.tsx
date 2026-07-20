@@ -1,5 +1,5 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type FocusEvent, type HTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
-import { IconEyeCheck, IconEyeOff, IconPlus } from '@tabler/icons-react'
+import { IconEyeCheck, IconEyeOff, IconPlus, IconTrash } from '@tabler/icons-react'
 import { cn } from '../lib/utils'
 import { money } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
@@ -12,8 +12,9 @@ export const EyeToggle = ({ className }: { className?: string }) => {
 
 export const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => <div className={cn('card-glow rounded-[22px] border border-border bg-surface', className)} {...props} />
 export const Button = ({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button className={cn('inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition active:scale-[.98] disabled:opacity-50', className)} {...props} />
-export const AddButton = ({ children='Adicionar', className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-accent pl-2 pr-2.5 text-[10px] font-bold normal-case tracking-normal text-white shadow-[0_5px_16px_rgba(255,106,26,.35)] transition active:scale-95 disabled:opacity-50',className)}><IconPlus size={12} strokeWidth={3}/>{children}</button>
-export const ChipButton = ({ children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-[10px] font-semibold normal-case tracking-normal text-t2 transition active:scale-95 disabled:opacity-50',className)}>{children}</button>
+export const AddButton = ({ children='Adicionar', className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-accent pl-2 pr-2.5 text-[10px] font-bold normal-case tracking-normal text-white transition active:scale-95 disabled:opacity-50',className)}><IconPlus size={12} strokeWidth={3}/>{children}</button>
+export const DangerButton = ({ children='Excluir', className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-red/10 pl-2 pr-2.5 text-[10px] font-bold normal-case tracking-normal text-red transition active:scale-95 disabled:opacity-50',className)}><IconTrash size={12} strokeWidth={2.4}/>{children}</button>
+export const ChipButton =({ children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-2.5 text-[10px] font-semibold normal-case tracking-normal text-t2 transition active:scale-95 disabled:opacity-50',className)}>{children}</button>
 export const Input = ({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) => <input className={cn('h-11 w-full rounded-xl border border-border bg-el px-3 text-sm text-t1 outline-none transition focus:border-accent', className)} {...props} />
 type MoneyInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'className'> & { value: number; onValueChange: (value: number) => void; className?: string; inputClassName?: string }
 const parseMoney = (raw: string) => {
