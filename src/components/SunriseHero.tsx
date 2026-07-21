@@ -8,7 +8,7 @@ export function SunriseHero({ label, right, value, caption, kpis }: { label: str
     <div className="relative overflow-hidden rounded-[18px]" style={{ background: 'linear-gradient(155deg,#FFAD62 0%,#FF6A1A 8%,#FF5F38 18%,#F8C8AF 38%,#F8F2EE 58%,#FAFAFA 100%)' }}>
       <div className="flex items-center justify-between px-5 pb-2 pt-4">
         <p className="flex items-center text-[10px] font-bold uppercase tracking-[1.1px] text-white/70"><i className="mark-diamond mark-diamond-light"/>{label}</p>
-        <span className="flex items-center gap-1.5">{right}<EyeToggle className="border-transparent bg-[#6F4B3D]/10 text-[#6F4B3D]"/></span>
+        <span className="flex items-center gap-1.5">{right}<EyeToggle className="hero-eye-toggle"/></span>
       </div>
       <div className="px-5 pb-5 pt-2">
         <div className="number text-[44px] font-black leading-none tracking-[-2.2px] text-[#30241F]">{value}</div>

@@ -11,6 +11,7 @@ import { Config } from './pages/Config'
 import { Login } from './pages/Login'
 import { cn } from './lib/utils'
 import { defaultNavigation } from './lib/navigation'
+import { syncSystemBars } from './services/system-bars'
 
 const nav: { id: Tab; label: string; icon: typeof IconLayoutDashboard }[] = [
   { id: 'inicio', label: 'Início', icon: IconLayoutDashboard }, { id: 'tabela', label: 'Tabela', icon: IconReportMoney },
@@ -24,18 +25,21 @@ export default function App() {
   const navigation = useFinancas(s => s.data.config.navegacao)
   const signedIn = useFinancas(s => s.signedIn)
   const restore = useFinancas(s => s.restore)
-  useEffect(() => { document.documentElement.dataset.theme = theme }, [theme])
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#0C0C10':'#F7F4F1')
+    syncSystemBars(theme)
+  }, [theme])
   useEffect(() => { void restore() }, [restore])
   const loginVisible = !signedIn
   const preferences = navigation ?? defaultNavigation
   const visibleNav = preferences.map(item=>nav.find(entry=>entry.id===item.id)).filter((item):item is (typeof nav)[number]=>Boolean(item)).filter(item=>item.id!=='config'&&preferences.find(pref=>pref.id===item.id)?.visivel!==false)
   const pages: Record<Tab, JSX.Element> = { inicio: <Dashboard />, tabela: <Tabela />, economia: <EconomiaPage />, emprestimos: <Emprestimos />, flux: <Flux />, config: loginVisible ? <Login /> : <Config /> }
   return <main className={cn('app-shell relative mx-auto h-[100dvh] w-full max-w-[390px] overflow-hidden bg-bg',loginVisible&&'login-shell')}>
-    <div className="app-scroll w-full overflow-x-hidden overflow-y-auto">{pages[tab]}</div>
-    {!loginVisible&&<div className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 h-[120px]" style={{background:'linear-gradient(to top, var(--bg) 0%, rgba(0,0,0,0) 100%)'}}/>}
+    <div className={cn('app-scroll w-full overflow-x-hidden overflow-y-auto',tab==='flux'&&'flux-scroll')}>{pages[tab]}</div>
     {!loginVisible&&<nav className="bottom-nav absolute z-40 flex px-2 pt-[9px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
-      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] py-1 text-[9px] font-semibold transition duration-200 active:scale-95', tab === id ? (id === 'flux' ? 'text-flux' : 'text-accent') : 'text-t3')}>
-        <Icon size={18} strokeWidth={2} /><span>{label}</span>
+      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className="relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] border border-transparent py-1 text-[9px] font-semibold text-t3 transition duration-200 active:scale-95">
+        <Icon size={18} strokeWidth={2} className={cn('transition-colors',tab===id&&(id==='flux'?'text-flux':'text-accent'))}/><span>{label}</span>
       </button>)}
     </nav>}
   </main>

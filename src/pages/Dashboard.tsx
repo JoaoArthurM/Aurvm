@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import NumberFlow from '@number-flow/react'
 import { IconChartBubble, IconLayoutGrid } from '@tabler/icons-react'
 import { useFinancas } from '../store/use-financas'
@@ -27,7 +26,7 @@ export function Dashboard(){
   <HeroCard saldo={t.saldo} entradas={t.entradas} gastos={t.gastos} fontes={data.tabela.entradas.length}/>
   <DonutCard fixos={t.fixos} variaveis={t.variaveis} assinaturas={t.assinaturas} economia={data.perfil.economia_mensal} saldo={t.saldo}/>
   <SankeyCard data={data}/>
-  <EconomyScale income={t.entradas} current={t.saldo}/>
+  <EconomyScale income={t.entradas} current={Math.max(data.perfil.economia_mensal,0)}/>
   <Subscriptions/>
  </div>
 }
@@ -48,9 +47,33 @@ function HeroCard({saldo,entradas,gastos,fontes}:{saldo:number;entradas:number;g
  />
 }
 
-function DonutCard({fixos,variaveis,assinaturas,economia,saldo}:{fixos:number;variaveis:number;assinaturas:number;economia:number;saldo:number}){const s=Math.max(saldo,0);const e=Math.max(economia,0);const pieTotal=fixos+variaveis+assinaturas+e||1;const legTotal=pieTotal+s||1;const a=fixos/pieTotal*100,b=a+variaveis/pieTotal*100,c=b+assinaturas/pieTotal*100;const gastos=[['Fixos',fixos,catColors.fixos],['Variáveis',variaveis,catColors.variaveis],['Assinaturas',assinaturas,catColors.assinaturas],['Economia',e,catColors.economia]];return <section className="card-glow mx-4 mb-[10px] rounded-2xl border border-border bg-surface p-4"><p className="mb-3 flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Distribuição dos gastos</p><div className="flex items-center gap-4"><div className="relative h-[108px] w-[108px] shrink-0 rounded-full" style={{background:`conic-gradient(${catColors.fixos} 0 ${a}%,${catColors.variaveis} ${a}% ${b}%,${catColors.assinaturas} ${b}% ${c}%,${catColors.economia} ${c}% 100%)`}}><div className="absolute inset-[22px] rounded-full bg-surface"/></div><div className="min-w-0 flex-1">{gastos.map(([label,value,color])=><div key={String(label)} className="mb-2 flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full" style={{background:String(color)}}/><span className="flex-1 text-xs text-t2">{label}</span><b className="number flex items-baseline gap-1 text-xs" style={{color:String(color)}}><BrlStyled value={Number(value)} numClass="text-xs" symClass="text-[10px] opacity-55"/><span className="opacity-25">|</span><small className="text-[10px] font-normal text-t3">{Math.round(Number(value)/legTotal*100)}%</small></b></div>)}<div className="mt-2 border-t border-border pt-2"><div className="flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full bg-t3"/><span className="flex-1 text-xs font-semibold text-t3">Saldo</span><b className="number flex items-baseline gap-1 text-xs text-t3"><BrlStyled value={s} numClass="text-xs text-t3" symClass="text-[10px] text-t3/60"/><span className="opacity-25">|</span><small className="text-[10px] font-semibold text-t3">100%</small></b></div></div></div></div></section>}
+function DonutCard({fixos,variaveis,assinaturas,economia,saldo}:{fixos:number;variaveis:number;assinaturas:number;economia:number;saldo:number}){
+ const s=Math.max(saldo,0)
+ const gastos=([
+  ['Fixos',fixos,catColors.fixos],
+  ['Variáveis',variaveis,catColors.variaveis],
+  ['Assinaturas',assinaturas,catColors.assinaturas],
+  ['Economia',Math.max(economia,0),catColors.economia],
+ ] as const).filter(([,value])=>value>0)
+ const pieTotal=gastos.reduce((total,[,value])=>total+value,0)
+ const legTotal=pieTotal+s||1
+ let cursor=0
+ const segments=gastos.map(([,value,color])=>{const start=cursor;cursor+=value/(pieTotal||1)*100;return `${color} ${start}% ${cursor}%`})
+ const background=segments.length?`conic-gradient(${segments.join(',')})`:'var(--el)'
+ return <section className="card-glow mx-4 mb-[10px] rounded-2xl border border-border bg-surface p-4"><p className="mb-3 flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Distribuição dos gastos</p><div className="flex items-center gap-4"><div className="relative h-[108px] w-[108px] shrink-0 rounded-full" style={{background}}><div className="absolute inset-[22px] rounded-full bg-surface"/></div><div className="min-w-0 flex-1">{gastos.map(([label,value,color])=><div key={label} className="mb-2 flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full" style={{background:color}}/><span className="flex-1 text-xs text-t2">{label}</span><b className="number flex items-baseline gap-1 text-xs" style={{color}}><BrlStyled value={value} numClass="text-xs" symClass="text-[10px] opacity-55"/><span className="opacity-25">|</span><small className="text-[10px] font-normal text-t3">{Math.round(value/legTotal*100)}%</small></b></div>)}<div className={gastos.length?'mt-2 border-t border-border pt-2':''}><div className="flex items-center gap-2"><i className="h-2 w-2 shrink-0 rounded-full bg-t3"/><span className="flex-1 text-xs font-semibold text-t3">Saldo</span><b className="number flex items-baseline gap-1 text-xs text-t3"><BrlStyled value={s} numClass="text-xs text-t3" symClass="text-[10px] text-t3/60"/><span className="opacity-25">|</span><small className="text-[10px] font-semibold text-t3">100%</small></b></div></div></div></div></section>
+}
 
-function SankeyCard({data}:{data:ReturnType<typeof useFinancas.getState>['data']}){const t=totals(data);const sources=data.tabela.entradas;const sourceTotal=Math.max(t.entradas,1);const economia=Math.max(data.perfil.economia_mensal,0);const flows=[['Fixos',t.fixos,catColors.fixos],['Variáveis',t.variaveis,catColors.variaveis],['Assinaturas',t.assinaturas,catColors.assinaturas],['Economia',economia,catColors.economia]];const H=240;const srcH=flows.reduce((s,[,v])=>s+Number(v)/sourceTotal*H,0);const svgH=18+flows.reduce((acc,[,v])=>acc+Math.max(8,Number(v)/sourceTotal*H)+5,0)-5+8;let dy=18,ldy=0;return <section className="card-glow mx-4 mb-[10px] overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-3 pt-[14px]"><p className="mb-[10px] flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Fluxo · Entradas e Saídas</p><svg viewBox={`0 0 340 ${svgH}`} className="w-full"><g><rect x="60" y="18" width="14" height={srcH} rx="3" fill={catColors.entradas}/><text x="57" y={18+srcH/2-5} textAnchor="end" fontSize="10" fill="#6F6761" fontWeight="700">Entradas</text><text x="57" y={18+srcH/2+9} textAnchor="end" fontSize="9" fill={catColors.entradas}><SvgCurrency value={t.entradas}/></text></g>{flows.map(([label,value,color])=>{const num=Number(value);const lh=num/sourceTotal*H;const rh=Math.max(8,lh);const ly=18+ldy;const ry=dy;ldy+=lh;dy+=rh+5;return <g key={String(label)}><path d={`M74,${ly} C120,${ly} 212,${ry} 268,${ry} L268,${ry+rh} C212,${ry+rh} 120,${ly+lh} 74,${ly+lh} Z`} fill={String(color)} opacity=".22"/><rect x="268" y={ry} width="14" height={rh} rx="2" fill={String(color)}/><text x="284" y={ry+rh/2-2} fontSize="10" fill={String(color)} fontWeight="700">{label}</text><text x="284" y={ry+rh/2+10} fontSize="9" fill={String(color)}><SvgCurrency value={num}/></text></g>})}</svg></section>}
+function SankeyCard({data}:{data:ReturnType<typeof useFinancas.getState>['data']}){
+ const t=totals(data);const sourceTotal=Math.max(t.entradas,1)
+ const flows=([
+  ['Fixos',t.fixos,catColors.fixos],
+  ['Variáveis',t.variaveis,catColors.variaveis],
+  ['Assinaturas',t.assinaturas,catColors.assinaturas],
+  ['Economia',Math.max(data.perfil.economia_mensal,0),catColors.economia],
+ ] as const).filter(([,value])=>value>0)
+ const H=240;const srcH=flows.reduce((total,[,value])=>total+value/sourceTotal*H,0);const svgH=flows.length?18+flows.reduce((height,[,value])=>height+Math.max(8,value/sourceTotal*H)+5,0)-5+8:76;let dy=18,ldy=0
+ return <section className="card-glow mx-4 mb-[10px] overflow-hidden rounded-2xl border border-border bg-surface px-3 pb-3 pt-[14px]"><p className="mb-[10px] flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Fluxo · Entradas e Saídas</p>{flows.length?<svg viewBox={`0 0 340 ${svgH}`} className="w-full"><g><rect x="60" y="18" width="14" height={srcH} rx="3" fill={catColors.entradas}/><text x="57" y={18+srcH/2-5} textAnchor="end" fontSize="10" fill="#6F6761" fontWeight="700">Entradas</text><text x="57" y={18+srcH/2+9} textAnchor="end" fontSize="9" fill={catColors.entradas}><SvgCurrency value={t.entradas}/></text></g>{flows.map(([label,value,color])=>{const lh=value/sourceTotal*H;const rh=Math.max(8,lh);const ly=18+ldy;const ry=dy;ldy+=lh;dy+=rh+5;return <g key={label}><path d={`M74,${ly} C120,${ly} 212,${ry} 268,${ry} L268,${ry+rh} C212,${ry+rh} 120,${ly+lh} 74,${ly+lh} Z`} fill={color} opacity=".22"/><rect x="268" y={ry} width="14" height={rh} rx="2" fill={color}/><text x="284" y={ry+rh/2-2} fontSize="10" fill={color} fontWeight="700">{label}</text><text x="284" y={ry+rh/2+10} fontSize="9" fill={color}><SvgCurrency value={value}/></text></g>})}</svg>:<p className="py-5 text-center text-[10px] text-t3">Nenhuma saída informada</p>}</section>
+}
 
 function EconomyScale({income,current}:{income:number;current:number}){
   const targets=[20,25,30]
@@ -83,7 +106,7 @@ function EconomyScale({income,current}:{income:number;current:number}){
     <div className="mx-3 mb-3 rounded-[16px] border border-border bg-bg/55 p-3.5">
       <div className="flex items-start justify-between">
         <div><p className="text-[9px] font-bold uppercase tracking-[.12em] text-t3">Situação atual</p><p className="number mt-1 text-[31px] font-bold leading-none tracking-[-1.5px]" style={{color:tone}}>{pct.toFixed(1).replace('.',',')}%</p></div>
-        <div className="text-right"><Currency value={current} className="text-[18px] font-bold" style={{color:tone}}/><p className="mt-1 text-[8px] text-t3">disponível neste ciclo</p></div>
+        <div className="text-right"><Currency value={current} className="text-[18px] font-bold" style={{color:tone}}/><p className="mt-1 text-[8px] text-t3">economia comprometida no mês</p></div>
       </div>
       <div className="relative mt-4 h-2 rounded-full bg-el">
         <div className="h-full rounded-full transition-all" style={{width:`${progress}%`,background:tone}}/>
@@ -96,8 +119,11 @@ function EconomyScale({income,current}:{income:number;current:number}){
 }
 
 function Subscriptions(){
-  const items=useFinancas(s=>s.data.tabela.assinaturas)
-  const [mode,setMode]=useState<'grid'|'bubble'>('grid')
+  const data=useFinancas(s=>s.data)
+  const mutate=useFinancas(s=>s.mutate)
+  const items=data.tabela.assinaturas
+  const mode=data.config.preferencias?.dashboard_assinaturas??'grid'
+  const setMode=(value:'grid'|'bubble')=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.dashboard_assinaturas=value})
   const total=sum(items)
   const colors=['#8B5CF6','#F43F5E','#10B981','#3B82F6']
   const summaries=[['Total/mês',total],['Trimestral',total*3],['Anual',total*12]] as const
@@ -119,7 +145,7 @@ function Subscriptions(){
   </section>
 }
 
-function Treemap({items,colors}:{items:{id:string;label:string;valor:number;logo?:{icon:string;file:string}|null}[];colors:string[]}){
+function Treemap({items,colors}:{items:{id:string;label:string;valor:number}[];colors:string[]}){
   const sorted=[...items].sort((a,b)=>b.valor-a.valor)
   const total=sum(sorted)||1
   const first=sorted[0]
@@ -141,18 +167,28 @@ function Treemap({items,colors}:{items:{id:string;label:string;valor:number;logo
   </svg>
 }
 
-function Bubbles({items,colors}:{items:{id:string;label:string;valor:number;logo?:{icon:string;file:string}|null}[];colors:string[]}){
-  const sorted=[...items].sort((a,b)=>b.valor-a.valor)
+function Bubbles({items,colors}:{items:{id:string;label:string;valor:number}[];colors:string[]}){
+  const sorted=items.filter(item=>item.valor>0).sort((a,b)=>b.valor-a.valor)
   const max=Math.max(...sorted.map(item=>item.valor),1)
   const radii=sorted.map(item=>28+Math.sqrt(item.valor/max)*26)
-  const tangent=(base:{x:number;y:number},distance:number,degrees:number)=>{const radians=degrees*Math.PI/180;return{x:base.x+Math.cos(radians)*distance,y:base.y+Math.sin(radians)*distance}}
-  const positions:{x:number;y:number}[]=[{x:102,y:132}]
-  if(radii[1])positions[1]=tangent(positions[0],radii[0]+radii[1],-32)
-  if(radii[2])positions[2]=tangent(positions[0],radii[0]+radii[2],50)
-  if(radii[3])positions[3]=tangent(positions[1],radii[1]+radii[3],50)
-  for(let index=4;index<radii.length;index++)positions[index]=tangent(positions[index-2],radii[index-2]+radii[index],index%2?35:-35)
+  const width=320,padding=10,gap=5,available=width-padding*2
+  const rows:{indices:number[];width:number;height:number}[]=[]
+  radii.forEach((radius,index)=>{
+    const diameter=radius*2
+    const current=rows[rows.length-1]
+    if(!current||current.width+gap+diameter>available)rows.push({indices:[index],width:diameter,height:diameter})
+    else{current.indices.push(index);current.width+=gap+diameter;current.height=Math.max(current.height,diameter)}
+  })
+  const positions:{x:number;y:number}[]=Array.from({length:sorted.length},()=>({x:0,y:0}))
+  let top=padding
+  rows.forEach((row,rowIndex)=>{
+    let left=(width-row.width)/2
+    row.indices.forEach(index=>{const radius=radii[index];positions[index]={x:left+radius,y:top+row.height/2};left+=radius*2+gap})
+    top+=row.height+(rowIndex===rows.length-1?padding:gap)
+  })
+  const canvasHeight=Math.max(150,top)
 
-  return <svg viewBox="0 0 320 270" className="block w-full">{sorted.map((item,index)=>{
+  return sorted.length?<svg viewBox={`0 0 ${width} ${canvasHeight}`} className="block w-full">{sorted.map((item,index)=>{
     const radius=radii[index]
     const {x,y}=positions[index]
     const iconSize=Math.max(18,Math.min(30,radius*.52))
@@ -162,5 +198,5 @@ function Bubbles({items,colors}:{items:{id:string;label:string;valor:number;logo
       <text x={x} y={y+radius*.27} textAnchor="middle" fill="white" fontSize={radius<40?8:9} fontWeight="700">{item.label}</text>
       <text x={x} y={y+radius*.52} textAnchor="middle" fill="white" fillOpacity=".78" fontSize="7.5"><SvgCurrency value={item.valor}/></text>
     </g>
-  })}</svg>
+  })}</svg>:<p className="py-10 text-center text-[10px] text-t3">Nenhuma assinatura com valor</p>
 }

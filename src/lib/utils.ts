@@ -59,11 +59,13 @@ const monthDiff = (l: FluxLancamento, year: number, month: number) => {
 export const ocorreNoMes = (l: FluxLancamento, key: string) => {
   const [y, m] = key.split('-').map(Number)
   const diff = monthDiff(l, y, m)
+  if (l.repete?.excluidas?.some(date => date.startsWith(`${key}-`))) return false
   if (diff === 0) return true
   if (!l.repete || diff < 0) return false
   return l.repete.vezes == null || diff < l.repete.vezes
 }
 export const ocorreEm = (l: FluxLancamento, date: string) => {
+  if (l.repete?.excluidas?.includes(date)) return false
   if (l.data === date) return true
   if (!l.repete) return false
   const [y, m, d] = date.split('-').map(Number)

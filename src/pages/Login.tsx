@@ -26,9 +26,10 @@ function LoginTexture(){
 }
 
 export function Login(){
-  const loginDemo=useFinancas(s=>s.loginDemo)
+  const connect=useFinancas(s=>s.connect)
   const [loading,setLoading]=useState(false)
-  const signIn=async()=>{setLoading(true);await new Promise(resolve=>setTimeout(resolve,450));loginDemo()}
+  const [error,setError]=useState('')
+  const signIn=async()=>{setLoading(true);setError('');try{await connect()}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível entrar com o Google.')}finally{setLoading(false)}}
   return <div className="page flex h-full flex-col bg-bg px-4 pb-6 pt-1">
     <div className="login-sunrise login-sunrise-shadow relative min-h-0 flex-1 overflow-hidden rounded-[30px] border border-border">
       <LoginTexture/>
@@ -45,6 +46,7 @@ export function Login(){
       <span className="flex items-center gap-2.5 text-[13px] font-semibold text-t1"><GoogleMark/><span>Continuar com <GoogleWord/></span></span>
       <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-accent/10 text-accent">{loading?<IconLoader2 size={18} className="animate-spin"/>:<IconArrowRight size={18}/>}</span>
     </button>
-    <p className="mt-3 flex items-center justify-center gap-1.5 text-[9px] text-t3"><IconShieldCheck size={12} className="shrink-0 text-accent"/>Seus dados ficam no seu Google Drive · escopo privado</p>
+    {error&&<p role="alert" className="mt-3 rounded-[12px] border border-red/20 bg-red/[.06] px-3 py-2 text-center text-[9px] font-semibold text-red">{error}</p>}
+    <p className="mt-3 flex items-center justify-center gap-1.5 text-[9px] text-t3"><IconShieldCheck size={12} className="shrink-0 text-accent"/>Backup local imediato + cópia no seu Google Drive</p>
   </div>
 }

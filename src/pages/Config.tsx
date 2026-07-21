@@ -1,29 +1,75 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import {
-  IconArrowDown, IconArrowUp, IconBell, IconChevronRight, IconDeviceMobile, IconEyeCheck,
-  IconEyeOff, IconInfoCircle, IconLayoutNavbar, IconLogout, IconMoon, IconPalette,
-  IconRefresh, IconShieldCheck, IconSun, IconUser,
+  IconBell, IconBellRinging, IconChevronRight, IconDownload, IconEyeCheck, IconGripVertical,
+  IconEyeOff, IconHome, IconInfoCircle, IconLayoutNavbar, IconLogout, IconMoon, IconPalette,
+  IconPigMoney, IconRefresh, IconReportMoney, IconShieldCheck, IconSun, IconTableColumn,
+  IconUpload, IconUser, IconUserDollar,
 } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
+import { AurvmSelect } from '../components/AurvmControls'
 import { Button, Card, Toggle } from '../components/ui'
 import { cn } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 import { defaultNavigation, navigationLabels } from '../lib/navigation'
-import type { Tab } from '../lib/types'
+import type { FinancasData, Tab } from '../lib/types'
+import { exportBackupFile } from '../services/local-backup'
+
+const isFinancasBackup=(value:unknown):value is FinancasData=>{
+  if(!value||typeof value!=='object')return false
+  const data=value as Partial<FinancasData>
+  return data.version===1&&Boolean(data.perfil)&&Boolean(data.config)&&Array.isArray(data.economias)&&Boolean(data.tabela)&&['entradas','fixos','variaveis','assinaturas'].every(key=>Array.isArray(data.tabela?.[key as keyof FinancasData['tabela']]))&&Array.isArray(data.emprestimos?.pessoas)&&Array.isArray(data.flux?.lancamentos)&&Array.isArray(data.flux?.tags)
+}
+
+const startScreenMeta:Record<Tab,{caption:string;icon:ReactNode;color:string}>={
+  inicio:{caption:'Resumo e visão geral',icon:<IconHome size={15}/>,color:'var(--accent)'},
+  tabela:{caption:'Planejamento mensal',icon:<IconReportMoney size={15}/>,color:'var(--red)'},
+  economia:{caption:'Reservas e metas',icon:<IconPigMoney size={15}/>,color:'var(--green)'},
+  emprestimos:{caption:'Cobranças e dívidas',icon:<IconUserDollar size={15}/>,color:'#4B82F4'},
+  flux:{caption:'Movimentações diárias',icon:<IconTableColumn size={15}/>,color:'var(--flux-orange)'},
+  config:{caption:'Preferências do aplicativo',icon:<IconLayoutNavbar size={15}/>,color:'var(--t2)'},
+}
 
 export function Config(){
-  const {data,mutate,connected,accountName,syncStatus,connect,disconnect,logout}=useFinancas()
+  const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,logout}=useFinancas()
   const [error,setError]=useState('')
+  const [backupStatus,setBackupStatus]=useState<{type:'success'|'error';text:string}|null>(null)
+  const [dragging,setDragging]=useState<Tab|null>(null)
+  const backupInputRef=useRef<HTMLInputElement>(null)
+  const dragRef=useRef<{id:Tab;startY:number;index:number}|null>(null)
   const busy=syncStatus==='syncing'
+  const tableReminderCount=Object.values(data.tabela).flat().filter(item=>item.lembrete).length
+  const debtReminderCount=data.emprestimos.pessoas.flatMap(person=>person.lancamentos).filter(item=>item.lembrete).length
+  const reminderCount=tableReminderCount+debtReminderCount
+  const exportBackup=async()=>{
+    setBackupStatus(null)
+    try{
+      const path=await exportBackupFile(data)
+      setBackupStatus({type:'success',text:`Backup salvo em ${path}.`})
+    }catch(error){setBackupStatus({type:'error',text:error instanceof Error?error.message:'Não foi possível exportar o backup.'})}
+  }
+  const importBackup=async(event:ChangeEvent<HTMLInputElement>)=>{
+    const file=event.target.files?.[0];event.target.value='';if(!file)return
+    try{
+      const parsed=JSON.parse(await file.text()) as unknown
+      const candidate=parsed&&typeof parsed==='object'&&'data' in parsed?(parsed as {data:unknown}).data:parsed
+      if(!isFinancasBackup(candidate))throw new Error('Formato inválido')
+      replaceData(structuredClone(candidate))
+      setBackupStatus({type:'success',text:'Backup importado. Todos os dados foram restaurados.'})
+    }catch{setBackupStatus({type:'error',text:'Arquivo inválido. Escolha um backup JSON gerado pelo Aurvm.'})}
+  }
   const setTheme=(tema:'light'|'dark')=>mutate(d=>{d.config.tema=tema})
   const navigationItems=data.config.navegacao??defaultNavigation
+  const visibleStartScreens=navigationItems.filter(item=>item.id!=='config'&&item.visivel)
+  const startScreen=visibleStartScreens.some(item=>item.id===data.config.tela_inicial)?data.config.tela_inicial??'inicio':visibleStartScreens[0]?.id??'inicio'
   const toggleNavigation=(id:Tab)=>{
-    if(id==='config')return
+    if(id==='inicio'||id==='config')return
     mutate(d=>{
       const items=d.config.navegacao??defaultNavigation.map(item=>({...item}))
       d.config.navegacao=items
       const item=items.find(item=>item.id===id)
+      if(item?.visivel&&items.filter(entry=>entry.id!=='config'&&entry.visivel).length===1)return
       if(item)item.visivel=!item.visivel
+      if(item&&!item.visivel&&(d.config.tela_inicial??'inicio')===id)d.config.tela_inicial=items.find(entry=>entry.id!=='config'&&entry.visivel)?.id??'inicio'
     })
   }
   const moveNavigation=(id:Tab,direction:-1|1)=>mutate(d=>{
@@ -34,6 +80,22 @@ export function Config(){
     if(index<0||target<0||target>=items.length)return
     ;[items[index],items[target]]=[items[target],items[index]]
   })
+  const dropNavigation=(clientY:number)=>{
+    const drag=dragRef.current
+    if(!drag)return
+    const steps=Math.round((clientY-drag.startY)/61)
+    if(steps!==0)mutate(d=>{
+      const items=d.config.navegacao??defaultNavigation.map(item=>({...item}))
+      d.config.navegacao=items
+      const index=items.findIndex(item=>item.id===drag.id)
+      if(index<0)return
+      const target=Math.max(0,Math.min(items.length-1,drag.index+steps))
+      const [moved]=items.splice(index,1)
+      items.splice(target,0,moved)
+    })
+    dragRef.current=null
+    setDragging(null)
+  }
 
   return <div className="page min-h-full pb-4 font-sans">
     <PageHeader eyebrow="Preferências" title="Configurações" subtitle="Deixe o Aurvm com a sua cara."/>
@@ -47,12 +109,22 @@ export function Config(){
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold text-t1">{connected?(accountName??'Google Drive conectado'):'Google Drive desconectado'}</p>
-              <p className="mt-1 text-[10px] text-t3">{connected?syncStatus==='synced'?'financas.json sincronizado':syncStatus==='error'?'Erro na última sincronização':'Sincronização ativa':'Seus dados estão apenas nesta sessão'}</p>
+              <p className="mt-1 text-[10px] text-t3">{connected?syncStatus==='synced'?'financas.json sincronizado':syncStatus==='error'?'Erro na última sincronização':'Sincronização ativa':'Dados protegidos neste aparelho'}</p>
             </div>
             <Toggle checked={connected} onChange={async()=>{setError('');try{connected?await disconnect():await connect()}catch(e){setError(e instanceof Error?e.message:'Falha ao conectar')}}}/>
           </div>
           {error&&<p className="border-t border-border px-4 py-3 text-[10px] text-red">{error}</p>}
-          <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-[9px] text-t3"><IconShieldCheck size={13} className="text-accent"/>Escopo privado drive.file · somente arquivos do Aurvm</div>
+          <div className="grid grid-cols-2 border-t border-border text-[9px]">
+            <div className="border-r border-border px-4 py-3"><span className="block text-t3">Neste aparelho</span><span className="mt-1 block font-semibold text-green">{lastBackupAt?`Protegido às ${new Date(lastBackupAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Aguardando primeira edição'}</span></div>
+            <div className="px-4 py-3"><span className="block text-t3">Google Drive</span><span className={cn('mt-1 block font-semibold',syncStatus==='error'?'text-red':connected?'text-green':'text-t3')}>{!connected?'Não conectado':syncStatus==='syncing'?'Sincronizando…':syncStatus==='error'?'Falha ao sincronizar':lastSyncAt?`Sincronizado às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Conectado'}</span></div>
+          </div>
+          <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-[9px] text-t3"><IconShieldCheck size={13} className="text-accent"/>Acesso limitado drive.file · somente arquivos criados pelo Aurvm</div>
+          <div className="grid grid-cols-2 gap-2 border-t border-border p-3">
+            <button type="button" onClick={exportBackup} className="glass-action glass-neutral flex min-w-0 items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-green/10 text-green"><IconDownload size={15}/></span><span className="min-w-0"><span className="block text-[10px] font-bold text-t1">Exportar</span><span className="mt-0.5 block text-[8px] text-t3">Salvar JSON</span></span></button>
+            <button type="button" onClick={()=>backupInputRef.current?.click()} className="glass-action glass-accent flex min-w-0 items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"><IconUpload size={15}/></span><span className="min-w-0"><span className="block text-[10px] font-bold text-t1">Importar</span><span className="mt-0.5 block text-[8px] text-t3">Abrir JSON</span></span></button>
+            <input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} className="hidden"/>
+          </div>
+          {backupStatus&&<p className={cn('border-t border-border px-4 py-3 text-[9px]',backupStatus.type==='success'?'text-green':'text-red')}>{backupStatus.text}</p>}
         </Card>
       </ConfigSection>
 
@@ -70,17 +142,21 @@ export function Config(){
 
       <ConfigSection icon={<IconLayoutNavbar size={15}/>} title="Organização">
         <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
-          {navigationItems.map((item,index)=>{
-            const locked=item.id==='config'
-            return <div key={item.id} className={cn('flex items-center border-b border-border px-3 py-3 last:border-0',!item.visivel&&'opacity-55')}>
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><IconHome size={16}/></span>
+            <div className="min-w-0 flex-1"><p className="text-[12px] font-semibold text-t1">Tela padrão</p><p className="mt-0.5 text-[9px] text-t3">Abre primeiro ao entrar no Aurvm</p></div>
+            <AurvmSelect ariaLabel="Escolher tela padrão" value={startScreen} onChange={value=>mutate(d=>{d.config.tela_inicial=value as Tab})} side="bottom" className="glass-action glass-accent h-10 w-[128px] bg-transparent" menuClassName="pb-6" options={visibleStartScreens.map(item=>({value:item.id,label:navigationLabels[item.id],caption:startScreenMeta[item.id].caption,icon:startScreenMeta[item.id].icon,color:startScreenMeta[item.id].color}))}/>
+          </div>
+          <div className="flex items-center gap-2 border-b border-border bg-el/35 px-4 py-2.5 text-[9px] text-t3"><IconGripVertical size={13}/><span>Segure a alça e arraste para reorganizar</span></div>
+          {navigationItems.filter(item=>item.id!=='config').map(item=>{
+            const index=navigationItems.findIndex(entry=>entry.id===item.id)
+            const locked=item.id==='inicio'
+            return <div key={item.id} className={cn('flex items-center border-b border-border px-3 py-3 transition last:border-0',!item.visivel&&'opacity-55',dragging===item.id&&'scale-[.985] bg-accent/5 shadow-inner')}>
               <button type="button" disabled={locked} onClick={()=>toggleNavigation(item.id)} aria-label={item.visivel?`Ocultar ${navigationLabels[item.id]}`:`Mostrar ${navigationLabels[item.id]}`} className={cn('mr-3 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition',item.visivel?'bg-[#238A5B]/10 text-[#238A5B]':'bg-el text-t3',locked&&'cursor-not-allowed')}>
                 {item.visivel?<IconEyeCheck size={17}/>:<IconEyeOff size={17}/>}
               </button>
               <div className="min-w-0 flex-1"><p className="text-[12px] font-semibold text-t1">{navigationLabels[item.id]}</p><p className="mt-0.5 text-[9px] text-t3">{locked?'Sempre visível':item.visivel?'Visível no menu':'Oculta do menu'}</p></div>
-              <div className="flex gap-1">
-                <button type="button" disabled={index===0} onClick={()=>moveNavigation(item.id,-1)} aria-label={`Mover ${navigationLabels[item.id]} para cima`} className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-el text-t2 transition active:scale-95 disabled:opacity-25"><IconArrowUp size={14}/></button>
-                <button type="button" disabled={index===navigationItems.length-1} onClick={()=>moveNavigation(item.id,1)} aria-label={`Mover ${navigationLabels[item.id]} para baixo`} className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-el text-t2 transition active:scale-95 disabled:opacity-25"><IconArrowDown size={14}/></button>
-              </div>
+              <button type="button" aria-label={`Reordenar ${navigationLabels[item.id]}`} title="Segure e arraste" className="grid h-10 w-9 touch-none place-items-center rounded-xl text-t3 transition active:bg-el active:text-t1" onPointerDown={e=>{dragRef.current={id:item.id,startY:e.clientY,index};setDragging(item.id);e.currentTarget.setPointerCapture(e.pointerId)}} onPointerUp={e=>dropNavigation(e.clientY)} onPointerCancel={()=>{dragRef.current=null;setDragging(null)}} onKeyDown={e=>{if(e.key==='ArrowUp'&&index>0){e.preventDefault();moveNavigation(item.id,-1)}if(e.key==='ArrowDown'&&index<navigationItems.length-1){e.preventDefault();moveNavigation(item.id,1)}}}><IconGripVertical size={20} strokeWidth={2}/></button>
             </div>
           })}
         </Card>
@@ -88,9 +164,7 @@ export function Config(){
 
       <ConfigSection icon={<IconBell size={15}/>} title="Notificações">
         <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
-          <SettingRow icon={<IconBell size={16}/>} label="Alertas de gasto" caption="Avisar ao ultrapassar o planejado"><Toggle checked={data.config.alertas_gasto} onChange={()=>mutate(d=>{d.config.alertas_gasto=!d.config.alertas_gasto})}/></SettingRow>
-          <SettingRow icon={<IconDeviceMobile size={16}/>} label="Lembrete mensal" caption={`Dia ${data.config.dia_lembrete} de cada mês`}><Toggle checked={data.config.lembrete_mensal} onChange={()=>mutate(d=>{d.config.lembrete_mensal=!d.config.lembrete_mensal})}/></SettingRow>
-          {data.config.lembrete_mensal&&<div className="flex items-center gap-3 border-t border-border px-4 py-3"><span className="flex-1 text-[10px] text-t2">Dia do lembrete</span><input type="number" min="1" max="28" value={data.config.dia_lembrete} onChange={e=>mutate(d=>{d.config.dia_lembrete=Math.min(28,Math.max(1,Number(e.target.value)))})} className="number w-12 rounded-lg border border-border bg-el px-2 py-1.5 text-center text-xs text-t1 outline-none focus:border-accent"/></div>}
+          <SettingRow icon={<IconBellRinging size={16}/>} label="Lembretes de cobranças e dívidas" caption={reminderCount?`${reminderCount} ${reminderCount===1?'lembrete cadastrado':'lembretes cadastrados'}`:'Nenhum lembrete cadastrado'}><Toggle checked={data.config.lembrete_mensal} onChange={()=>mutate(d=>{d.config.lembrete_mensal=!d.config.lembrete_mensal})}/></SettingRow>
         </Card>
       </ConfigSection>
 
