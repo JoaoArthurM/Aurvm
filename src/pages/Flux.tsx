@@ -8,12 +8,20 @@ import {
 import { AddButton, Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
 import { AurvmDatePicker, AurvmSelect } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
-import { cn, fluxMeta, getLimites, money, monthKey, ocorreEm, ocorreNoMes, saldoStyle, tempTiers, uid } from '../lib/utils'
+import { cn, fluxMeta, getLimites, money, monthKey, ocorreEm, ocorreNoMes, quintoDiaUtil, recurrenceOccurrenceIndex, saldoStyle, tempTiers, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
-import type { Cartao, FluxTipo } from '../lib/types'
+import type { Cartao, FluxLancamento, FluxTipo, RepeticaoFrequencia } from '../lib/types'
 
 const fluxIcons = { entrada: IconCashBanknotePlus, saida: IconCashBanknoteMinus, diario: IconReceiptDollar, economia: IconPigMoney, cartao: IconCreditCard } as const
 function FluxTypeIcon({tipo,size=12}:{tipo:FluxTipo;size?:number}){const Icon=fluxIcons[tipo];return <Icon size={size} strokeWidth={2.4}/>}
+function DailyPlanNotice({value}:{value:number}){return <div className="mt-2 flex items-center justify-center gap-2.5 rounded-[12px] border border-dashed bg-surface px-2.5 py-2" style={{borderColor:`${fluxMeta.diario.color}55`}}><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><FluxTypeIcon tipo="diario" size={13}/></span><span className="min-w-0 text-center"><span className="block text-[11px] font-semibold text-t1">Previsão diária</span><span className="mt-0.5 block text-[9px] text-t3">planejamento automático</span></span><Currency value={value} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta.diario.color}}/></div>}
+const recurrenceSuggestions=[2,3,4,5,6,7,8,9,10,11,12]
+const recurrenceOptions=[
+ {value:'mensal',label:'mensalmente',caption:'repete o mesmo valor mensalmente',icon:<IconRepeat size={13}/>,color:'var(--green)'},
+ {value:'semanal',label:'semanalmente',caption:'repete o mesmo valor semanalmente',icon:<IconRepeat size={13}/>,color:'var(--green)'},
+ {value:'diaria',label:'diariamente',caption:'repete o mesmo valor diariamente',icon:<IconRepeat size={13}/>,color:'var(--green)'},
+ {value:'nao',label:'não repete',caption:'somente nesta data',icon:<IconCalendar size={13}/>,color:'var(--t2)'},
+]
 
 const cardDueDate=(year:number,month:number,vencimento:number)=>new Date(year,month,Math.min(vencimento,new Date(year,month+1,0).getDate()))
 const nextDueDate=(vencimento:number)=>{const today=new Date();today.setHours(0,0,0,0);const due=cardDueDate(today.getFullYear(),today.getMonth(),vencimento);return due<today?cardDueDate(today.getFullYear(),today.getMonth()+1,vencimento):due}
@@ -27,41 +35,84 @@ const cardBillingDates=(card:Cartao,reference=new Date())=>{
  return{fechamento,vencimento}
 }
 const shortDateLabel=(date:Date)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short'}).format(date).replace('.','')
+const cardMonthLabel=(value:string)=>{const [year,month]=value.split('-').map(Number);const label=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(year,month-1,1));return label.charAt(0).toUpperCase()+label.slice(1)}
 // 5º dia útil: conta segunda a sábado, pulando apenas domingos.
-const quintoDiaUtil=(d:Date)=>{const total=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();let uteis=0;for(let day=1;day<=total;day++){const wd=new Date(d.getFullYear(),d.getMonth(),day).getDay();if(wd!==0){uteis++;if(uteis===5)return day}}return 0}
 const localISO=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+const isFifthBusinessDay=(value:string)=>{const [year,month,day]=value.split('-').map(Number);return day===quintoDiaUtil(new Date(year,month-1,1))}
 
 type FluxTab='saldos'|'totais'|'tags'|'menu'
 export function Flux(){
- const {data,mutate}=useFinancas(); const [monthOffset,setMonthOffset]=useState(0); const tab=data.config.preferencias?.flux_aba??'saldos';const [horizon,setHorizon]=useState(false);const [adding,setAdding]=useState(false);const [saldosFocusRequest,setSaldosFocusRequest]=useState(0)
+ const {data,mutate}=useFinancas(); const [monthOffset,setMonthOffset]=useState(0); const tab=data.config.preferencias?.flux_aba??'saldos';const [horizon,setHorizon]=useState(false);const [adding,setAdding]=useState(false);const [editing,setEditing]=useState<{item:FluxLancamento;occurrenceDate:string}|null>(null);const [saldosFocusRequest,setSaldosFocusRequest]=useState(0)
  const setTab=(value:FluxTab)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_aba=value})
  const today=new Date();const base=new Date(today.getFullYear(),today.getMonth()+monthOffset,1);const key=monthKey(base);const label=new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit'}).format(base).replace('.','')
- return <div className="page min-h-full bg-bg"><header className="px-5 pt-[14px]"><p className="mb-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-accent">Fluxo diário</p><div className="flex items-center justify-between gap-2"><h1 className="min-w-0 font-display text-[26px] font-semibold leading-none tracking-[-1.2px] text-t1">{label}</h1><div className="flex shrink-0 items-center gap-1"><button aria-label="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeLeft size={18}/></button><button aria-label="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeRight size={18}/></button><button aria-label="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-9 items-center gap-1 rounded-full border px-2.5 text-[9px] font-bold transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={14}/>Hoje</button><button aria-label="Horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconCalendarMonth size={17}/></button><button aria-label="Nova movimentação" onClick={()=>setAdding(true)} className="glass-action glass-accent grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><Plus size={17} strokeWidth={2.4}/></button></div></div></header>
+  return <div className="page min-h-full bg-bg"><header className="px-5 pt-[14px]"><p className="mb-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-accent">Fluxo diário</p><div className="flex items-center justify-between gap-2"><h1 className="min-w-0 font-display text-[26px] font-semibold leading-none tracking-[-1.2px] text-t1">{label}</h1><div className="flex shrink-0 items-center gap-1"><button aria-label="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeLeft size={18}/></button><button aria-label="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeRight size={18}/></button><button aria-label="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-9 items-center gap-1 rounded-full border px-2.5 text-[9px] font-bold transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={14}/>Hoje</button><button aria-label="Horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconCalendarMonth size={17}/></button><button aria-label="Nova movimentação" onClick={()=>{setEditing(null);setAdding(true)}} className="glass-action glass-accent grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><Plus size={17} strokeWidth={2.4}/></button></div></div></header>
  <div className="flux-tabs-sticky sticky z-20 grid grid-cols-4 border-b border-border">{(['saldos','totais','tags','menu'] as FluxTab[]).map(x=><button onClick={()=>{setTab(x);if(x==='saldos')setSaldosFocusRequest(value=>value+1)}} key={x} className={cn('border-b-2 border-transparent py-[10px] text-xs font-semibold capitalize text-t3 transition',tab===x&&'border-flux text-flux')}>{x}</button>)}</div>
- <div className={cn(tab!=='saldos'&&'px-4 pt-4')}>{tab==='saldos'&&<Saldos month={base} focusRequest={saldosFocusRequest}/>} {tab==='totais'&&<Totais monthKey={key}/>} {tab==='tags'&&<Tags monthKey={key}/>} {tab==='menu'&&<FluxMenu/>}</div>
- {horizon&&<Horizon close={()=>setHorizon(false)}/>} {adding&&<NewTransaction close={()=>setAdding(false)}/>}</div>
+  <div className={cn(tab!=='saldos'&&'px-4 pt-4')}>{tab==='saldos'&&<Saldos month={base} focusRequest={saldosFocusRequest} onEdit={(item,occurrenceDate)=>setEditing({item,occurrenceDate})}/>} {tab==='totais'&&<Totais monthKey={key}/>} {tab==='tags'&&<Tags monthKey={key}/>} {tab==='menu'&&<FluxMenu/>}</div>
+  {horizon&&<Horizon close={()=>setHorizon(false)}/>} {(adding||editing)&&<NewTransaction edit={editing?.item??null} occurrenceDate={editing?.occurrenceDate} close={()=>{setAdding(false);setEditing(null)}}/>}</div>
 }
 
 type SaldoFilter='total'|FluxTipo
-function Saldos({month,focusRequest}:{month:Date;focusRequest:number}){
+function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEdit:(item:FluxLancamento,occurrenceDate:string)=>void}){
  const {data,mutate}=useFinancas();const hidden=useFinancas(s=>s.valuesHidden)
  const filter=data.config.preferencias?.flux_filtro??'total'
- const setFilter=(value:SaldoFilter)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_filtro=value})
+ const showDailyPlan=data.config.preferencias?.flux_mostrar_planejamento_diario??true
  const [filterOpen,setFilterOpen]=useState(false)
- const [openDay,setOpenDay]=useState<number|null>(null)
+ const [openCell,setOpenCell]=useState<{month:'current'|'next';day:number}|null>(null)
+ const setFilter=(value:SaldoFilter)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_filtro=value})
+ const toggleDailyPlan=()=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_mostrar_planejamento_diario=!showDailyPlan})
  const [deleteId,setDeleteId]=useState<string|null>(null)
  const [recurrenceDelete,setRecurrenceDelete]=useState<{id:string;date:string}|null>(null)
- const currentKey=monthKey(month);const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();const today=new Date();const nowDay=currentKey===monthKey(today)?today.getDate():-1
+ const [cardDayEditor,setCardDayEditor]=useState<{monthKey:string;value:string}|null>(null)
+ const currentKey=monthKey(month);const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();const today=new Date();today.setHours(0,0,0,0);const isCurrentMonth=currentKey===monthKey(today);const nowDay=isCurrentMonth?today.getDate():-1
  const todayRowRef=useRef<HTMLDivElement>(null)
  useEffect(()=>{if(nowDay<1)return;const frame=requestAnimationFrame(()=>todayRowRef.current?.scrollIntoView({block:'start',behavior:'smooth'}));return()=>cancelAnimationFrame(frame)},[currentKey,focusRequest,nowDay])
  const limites=getLimites(data.flux.temperatura)
  const nextDate=new Date(month.getFullYear(),month.getMonth()+1,1)
- const nextNet=data.flux.lancamentos.filter(l=>ocorreNoMes(l,monthKey(nextDate))).reduce((a,l)=>a+(l.tipo==='entrada'?l.valor:-l.valor),0)
  const monthHead=(d:Date)=>`${new Intl.DateTimeFormat('pt-BR',{month:'short'}).format(d).replace('.','')}/${String(d.getFullYear()).slice(2)}`
  const nextDays=new Date(nextDate.getFullYear(),nextDate.getMonth()+1,0).getDate()
- let balance=data.flux.saldo_inicial??0
- const rows=Array.from({length:days},(_,i)=>{const day=i+1;const date=`${currentKey}-${String(day).padStart(2,'0')}`;const tx=data.flux.lancamentos.filter(l=>ocorreEm(l,date));tx.forEach(l=>balance+=l.tipo==='entrada'?l.valor:-l.valor);const projetado=balance+nextNet-data.flux.valor_diario_planejado*Math.max(0,day-nowDay);return{day,date,tx,saldo:balance,projetado}})
- const dayValue=(tx:typeof rows[number]['tx'])=>filter==='total'?tx.reduce((a,l)=>a+(l.tipo==='entrada'?l.valor:-l.valor),0):tx.filter(l=>l.tipo===filter).reduce((a,l)=>a+l.valor,0)
+ const movementOn=(date:Date)=>data.flux.lancamentos.filter(l=>ocorreEm(l,localISO(date))).reduce((total,l)=>total+(l.tipo==='entrada'?l.valor:-l.valor),0)
+ const dayNumber=(date:Date)=>Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())
+ const todayBalance=(data.flux.saldo_inicial??0)+movementOn(today)
+ const balanceBeforeToday=(target:Date)=>{
+  let value=data.flux.saldo_inicial??0
+  const cursor=new Date(target);cursor.setDate(cursor.getDate()+1)
+  while(dayNumber(cursor)<dayNumber(today)){
+   value-=movementOn(cursor)
+   cursor.setDate(cursor.getDate()+1)
+  }
+  return value
+ }
+ const projectFromToday=(target:Date)=>{
+  let projected=todayBalance
+  const cursor=new Date(today)
+  while(dayNumber(cursor)<dayNumber(target)){
+   cursor.setDate(cursor.getDate()+1)
+   projected+=movementOn(cursor)-data.flux.valor_diario_planejado
+  }
+  return projected
+ }
+ const previousMonthEnd=new Date(month.getFullYear(),month.getMonth(),0)
+ const monthOpeningBalance=dayNumber(previousMonthEnd)>=dayNumber(today)?projectFromToday(previousMonthEnd):(data.flux.saldo_inicial??0)
+ const plannedForDate=(date:Date)=>data.flux.valor_diario_planejado>0&&dayNumber(date)>dayNumber(today)?data.flux.valor_diario_planejado:0
+ const plannedDaysInCurrentMonth=Array.from({length:days},(_,index)=>plannedForDate(new Date(month.getFullYear(),month.getMonth(),index+1))).filter(value=>value>0).length
+ const currentMonthEndBalance=monthOpeningBalance+data.flux.lancamentos.filter(l=>ocorreNoMes(l,currentKey)).reduce((total,l)=>total+(l.tipo==='entrada'?l.valor:-l.valor),0)-plannedDaysInCurrentMonth*data.flux.valor_diario_planejado
+ const projectNextFromSelectedEnd=(target:Date)=>{
+  let projected=currentMonthEndBalance
+  const cursor=new Date(nextDate)
+  while(dayNumber(cursor)<=dayNumber(target)){
+   projected+=movementOn(cursor)
+   if(dayNumber(cursor)>dayNumber(nextDate))projected-=data.flux.valor_diario_planejado
+   cursor.setDate(cursor.getDate()+1)
+  }
+  return projected
+ }
+ const plannedForCurrentDate=(date:Date)=>plannedForDate(date)
+ const plannedForNextDate=(date:Date)=>isCurrentMonth?plannedForDate(date):data.flux.valor_diario_planejado>0&&dayNumber(date)>dayNumber(nextDate)?data.flux.valor_diario_planejado:0
+ let balance=monthOpeningBalance
+  const rows=Array.from({length:days},(_,i)=>{const day=i+1;const date=`${currentKey}-${String(day).padStart(2,'0')}`;const tx=data.flux.lancamentos.filter(l=>ocorreEm(l,date));const currentDate=new Date(month.getFullYear(),month.getMonth(),day);const planned=plannedForCurrentDate(currentDate);tx.forEach(l=>balance+=l.tipo==='entrada'?l.valor:-l.valor);balance-=planned;const saldo=isCurrentMonth?(day<nowDay?balanceBeforeToday(currentDate):projectFromToday(currentDate)):balance;const nextTarget=new Date(nextDate.getFullYear(),nextDate.getMonth(),day);const nextDateKey=localISO(nextTarget);const nextTx=day<=nextDays?data.flux.lancamentos.filter(l=>ocorreEm(l,nextDateKey)):[];const plannedNext=day<=nextDays?plannedForNextDate(nextTarget):0;const projetado=isCurrentMonth?projectFromToday(nextTarget):projectNextFromSelectedEnd(nextTarget);return{day,date,tx,nextTx,nextDate:nextDateKey,saldo,projetado,planned,plannedNext}})
+  const dayValue=(tx:typeof rows[number]['tx'],planned=0)=>{const visiblePlanned=showDailyPlan?planned:0;return filter==='total'?tx.reduce((a,l)=>a+(l.tipo==='entrada'?l.valor:-l.valor),0)-visiblePlanned:tx.filter(l=>l.tipo===filter).reduce((a,l)=>a+l.valor,0)+(filter==='diario'?visiblePlanned:0)}
+  const visibleTransactions=(tx:typeof rows[number]['tx'])=>filter==='total'?tx:tx.filter(item=>item.tipo===filter)
+  const categoryTotals=(tx:typeof rows[number]['tx'],planned=0)=>{const visiblePlanned=showDailyPlan?planned:0;return (Object.keys(fluxMeta) as FluxTipo[]).map(type=>({type,value:tx.filter(item=>item.tipo===type).reduce((total,item)=>total+item.valor,0)+(type==='diario'?visiblePlanned:0)})).filter(item=>item.value!==0)}
  const isSunday=(d:Date,day:number)=>new Date(d.getFullYear(),d.getMonth(),day).getDay()===0
  const weekday=(d:Date,day:number)=>new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(new Date(d.getFullYear(),d.getMonth(),day)).replace('.','').slice(0,3)
  const deleteRecurring=(mode:'one'|'future'|'all')=>{
@@ -72,19 +123,36 @@ function Saldos({month,focusRequest}:{month:Date;focusRequest:number}){
    if(!item?.repete)return
    if(mode==='all'){d.flux.lancamentos=d.flux.lancamentos.filter(entry=>entry.id!==target.id);return}
    if(mode==='one'){item.repete.excluidas=Array.from(new Set([...(item.repete.excluidas??[]),target.date]));return}
-   const [baseYear,baseMonth]=item.data.split('-').map(Number)
-   const [targetYear,targetMonth]=target.date.split('-').map(Number)
-   const previousOccurrences=(targetYear-baseYear)*12+(targetMonth-baseMonth)
+   const previousOccurrences=recurrenceOccurrenceIndex(item,target.date)
    if(previousOccurrences<=0){d.flux.lancamentos=d.flux.lancamentos.filter(entry=>entry.id!==target.id);return}
    item.repete.vezes=item.repete.vezes==null?previousOccurrences:Math.min(item.repete.vezes,previousOccurrences)
    item.repete.excluidas=item.repete.excluidas?.filter(date=>date<target.date)
   })
   setRecurrenceDelete(null)
  }
+ const cardMovementsInMonth=(period:string)=>data.flux.lancamentos.filter(item=>item.tipo==='cartao'&&ocorreNoMes(item,period))
+ const hasCardDayAdjustment=(period:string)=>cardMovementsInMonth(period).some(item=>Boolean(item.cartao?.ajustes?.[period]))
+ const updateCardDay=(period:string,value:string|null)=>{
+  mutate(d=>{
+   d.flux.lancamentos.forEach(item=>{
+    if(item.tipo!=='cartao'||!ocorreNoMes(item,period))return
+    if(value){
+     item.cartao??={}
+     item.cartao.ajustes={...(item.cartao.ajustes??{}),[period]:value}
+     return
+    }
+    if(!item.cartao?.ajustes)return
+    const {[period]:removed,...rest}=item.cartao.ajustes
+    item.cartao.ajustes=rest
+    if(Object.keys(rest).length===0)delete item.cartao
+   })
+  })
+  setCardDayEditor(null)
+ }
  const cols='grid-cols-[minmax(0,1fr)_46px_68px_46px_68px]'
  return <Card className="rounded-none border-x-0">
   <div style={{background:'color-mix(in srgb, var(--el) 60%, var(--surface))'}} className={cn('sticky top-[38px] z-10 grid items-center border-b border-border py-2 text-[9px] font-bold uppercase tracking-wider text-t3',cols)}>
-   <div className="relative ml-2 w-max">
+   <div className="relative ml-2 flex items-center gap-1">
     <button aria-label="Filtrar transações por tipo" aria-expanded={filterOpen} onClick={()=>setFilterOpen(v=>!v)} className="glass-action glass-neutral inline-flex h-7 items-center gap-1.5 rounded-full border pl-1.5 pr-2.5 text-[9px] font-bold uppercase tracking-wider transition active:scale-95">
      <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full" style={filter==='total'?{color:'var(--t2)',background:'var(--el)'}:{color:'#FFF',background:fluxMeta[filter].color}}>{filter==='total'?<IconAdjustmentsDollar size={11}/>:<FluxTypeIcon tipo={filter} size={10}/>}</span>
      {filter==='total'?'Total':fluxMeta[filter].label}
@@ -100,34 +168,52 @@ function Saldos({month,focusRequest}:{month:Date;focusRequest:number}){
       </button>)}
      </div>
     </>}
+    <button type="button" aria-pressed={showDailyPlan} aria-label={showDailyPlan?'Ocultar planejamento diário':'Mostrar planejamento diário'} title={showDailyPlan?'Ocultar planejamento diário':'Mostrar planejamento diário'} onClick={toggleDailyPlan} className="glass-action glass-neutral grid h-7 w-7 place-items-center rounded-full border transition active:scale-95">{showDailyPlan?<IconEye size={12}/>:<IconEyeOff size={12}/>}</button>
    </div>
    <span className="col-span-2 text-center">{monthHead(month)}</span>
    <span className="col-span-2 text-center opacity-60">{monthHead(nextDate)}</span>
   </div>
   {rows.map(row=>{
-   const value=dayValue(row.tx)
-   const open=openDay===row.day
-   const valueColor=filter==='total'?(value>0?'var(--green)':'var(--red)'):fluxMeta[filter].color
-   const nextExists=row.day<=nextDays
-   const DayCell=({date,exists=true}:{date:Date;exists?:boolean})=>{const fifth=exists&&row.day===quintoDiaUtil(date);return <span aria-label={fifth?`${row.day}, quinto dia útil`:undefined} className={cn('number flex items-center justify-center border-l border-border/60 bg-el/40 text-[10px] font-bold',!exists&&'opacity-0',isSunday(date,row.day)?'text-red':'text-t2',row.day===nowDay&&'text-flux',fifth&&'bg-yellow/10')}><span className="inline-flex items-center gap-[2px]">{fifth&&<IconStarFilled size={7} className="shrink-0 text-yellow"/>}<span>{String(row.day).padStart(2,'0')}<span className="text-[8px] font-semibold opacity-70">/{weekday(date,row.day)}</span></span></span></span>}
+     const value=dayValue(row.tx,row.planned)
+     // No TOTAL, a célula deve abrir a lista bruta do dia, sem reduzir por tipo.
+     const currentTx=filter==='total'?row.tx:visibleTransactions(row.tx)
+     const nextTx=filter==='total'?row.nextTx:visibleTransactions(row.nextTx)
+    const categories=filter==='total'?categoryTotals(row.tx,row.planned):[]
+    const currentOpen=openCell?.month==='current'&&openCell.day===row.day
+    const nextOpen=openCell?.month==='next'&&openCell.day===row.day
+    const valueColor=filter==='total'?(value>0?'var(--green)':'var(--red)'):fluxMeta[filter].color
+    const nextExists=row.day<=nextDays
+    const DayCell=({date,exists=true}:{date:Date;exists?:boolean})=>{const fifth=exists&&row.day===quintoDiaUtil(date);return <span aria-label={fifth?`${row.day}, quinto dia útil`:undefined} className={cn('number flex items-center justify-center border-l border-border/60 bg-el/40 text-[10px] font-bold',!exists&&'opacity-0',isSunday(date,row.day)?'text-red':'text-t2',row.day===nowDay&&'text-flux',fifth&&'bg-yellow/10')}><span className="inline-flex items-center gap-[2px]">{fifth&&<IconStarFilled size={7} className="shrink-0 text-yellow"/>}<span>{String(row.day).padStart(2,'0')}<span className="text-[8px] font-semibold opacity-70">/{weekday(date,row.day)}</span></span></span></span>}
+    const transactionDetails=(tx:typeof rows[number]['tx'],date:string,period:string)=><div className="border-t border-border/60 bg-el/40 px-3 py-2.5"><p className="text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">Movimentações de {period} · dia {date.slice(-2)}</p>{tx.length===0?<p className="mt-2 rounded-[12px] border border-dashed border-border bg-surface/60 px-3 py-3 text-[10px] text-t3">Nenhuma entrada ou saída neste dia.</p>:<div className="mt-2 space-y-1.5">{tx.map(item=>{const txTagIds=item.tag_ids?.length?item.tag_ids:item.tag_id?[item.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((tag):tag is NonNullable<typeof tag>=>Boolean(tag));return <div key={item.id} className="flex items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[item.tipo].color}}><FluxTypeIcon tipo={item.tipo} size={13}/></span><span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-t1">{item.descricao}</span><span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{item.repete&&<IconRepeat size={9} strokeWidth={2.6}/>} {typeSingular[item.tipo]}{txTags.map(tag=><span key={tag.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tag.cor,background:`${tag.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tag.label}</span>)}</span></span><Currency value={item.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[item.tipo].color}}/>{deleteId===item.id?<span className="flex shrink-0 items-center gap-1 rounded-full border border-red/20 bg-red/5 p-0.5"><button type="button" aria-label="Cancelar exclusão" onClick={()=>setDeleteId(null)} className="grid h-7 w-7 place-items-center rounded-full text-t3 transition active:scale-95"><X size={13}/></button><DangerButton aria-label={`Confirmar exclusão de ${item.descricao}`} title={item.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(entry=>entry.id!==item.id)});setDeleteId(null)}} className="h-7 w-7"/></span>:<DangerButton aria-label={`Excluir ${item.descricao}`} title={item.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>item.repete?setRecurrenceDelete({id:item.id,date}):setDeleteId(item.id)} className="h-7 w-7"/>}</div>})}</div>}</div>
    return <div ref={row.day===nowDay?todayRowRef:undefined} key={row.date} className={cn('border-b border-border/60 last:border-0',row.day===nowDay&&'scroll-mt-[92px]')}>
-    <button onClick={()=>setOpenDay(open?null:row.day)} className={cn('grid min-h-[52px] w-full items-stretch text-left',cols,row.day===nowDay&&'bg-flux/5')}>
-     <span className="flex items-center gap-1.5 pl-2 pr-1">
-      {value!==0
-       ?<><span className="grid h-5 w-5 shrink-0 place-items-center rounded-md" style={{color:valueColor,background:`color-mix(in srgb, ${valueColor} 12%, transparent)`}}>{filter==='total'?<FluxTypeIcon tipo={value>0?'entrada':'saida'} size={11}/>:<FluxTypeIcon tipo={filter} size={11}/>}</span><Currency value={value} className="text-[11px] font-bold" style={{color:valueColor}}/></>
-       :<Currency value={0} className="text-[11px] text-t3/50"/>}
-     </span>
-     <DayCell date={month}/>
-     <span className="flex items-center justify-end pr-1.5" style={saldoStyle(row.saldo,limites)}>
-      <b className="number text-[11px] font-bold">{hidden?'••••':money(row.saldo)}</b>
-     </span>
-     <DayCell date={nextDate} exists={nextExists}/>
-     {nextExists
-      ?<span className="flex items-center justify-end pr-1.5 opacity-80" style={saldoStyle(row.projetado,limites)}><b className="number text-[11px] font-bold">{hidden?'••••':money(row.projetado)}</b></span>
-      :<span className="bg-el/30"/>}
-    </button>
-    {open&&row.tx.length>0&&<div className="space-y-1.5 border-t border-border/60 bg-el/40 px-3 py-2.5">
-     {row.tx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} className="flex items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2">
+     <div className={cn('grid min-h-[52px] w-full items-stretch',cols,row.day===nowDay&&'bg-flux/5')}>
+      <button type="button" aria-label={`Ver movimentações de ${monthHead(month)}, dia ${row.day}`} aria-expanded={currentOpen} onClick={()=>setOpenCell(currentOpen?null:{month:'current',day:row.day})} className={cn('col-span-3 grid min-w-0 grid-cols-[minmax(0,1fr)_46px_68px] items-stretch text-left transition',currentOpen&&'bg-flux/10')}>
+       {filter==='total'&&categories.length>0
+        ?<span className="flex min-w-0 flex-col justify-center gap-1 py-1 pl-2 pr-1">
+          {categories.map(({type,value})=><span key={type} className="flex min-w-0 items-center gap-1.5">
+           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md" style={{color:fluxMeta[type].color,background:`color-mix(in srgb, ${fluxMeta[type].color} 12%, transparent)`}}><FluxTypeIcon tipo={type} size={11}/></span>
+           <Currency value={value} className="min-w-0 text-[10px] font-bold" style={{color:fluxMeta[type].color}}/>
+          </span>)}
+         </span>
+        :<span className="flex items-center gap-1.5 pl-2 pr-1">
+          {value!==0
+           ?<><span className="grid h-5 w-5 shrink-0 place-items-center rounded-md" style={{color:valueColor,background:`color-mix(in srgb, ${valueColor} 12%, transparent)`}}>{filter==='total'?<FluxTypeIcon tipo={value>0?'entrada':'saida'} size={11}/>:<FluxTypeIcon tipo={filter} size={11}/>}</span><Currency value={value} className="text-[11px] font-bold" style={{color:valueColor}}/></>
+           :<Currency value={0} className="text-[11px] text-t3/50"/>}
+         </span>}
+       <DayCell date={month}/>
+       <span className="flex items-center justify-end border-l border-border/60 pr-1.5" style={saldoStyle(row.saldo,limites)}>
+        <b className="number text-[11px] font-bold">{hidden?'••••':money(row.saldo)}</b>
+       </span>
+      </button>
+      {nextExists
+       ?<button type="button" aria-label={`Ver movimentações de ${monthHead(nextDate)}, dia ${row.day}`} aria-expanded={nextOpen} onClick={()=>setOpenCell(nextOpen?null:{month:'next',day:row.day})} className={cn('col-span-2 grid min-w-0 grid-cols-[46px_68px] items-stretch text-left transition',nextOpen&&'bg-flux/10')}>
+        <DayCell date={nextDate} exists/>
+        <span className="flex items-center justify-end border-l border-border/60 pr-1.5 opacity-80" style={saldoStyle(row.projetado,limites)}><b className="number text-[11px] font-bold">{hidden?'••••':money(row.projetado)}</b></span>
+       </button>
+       :<span className="col-span-2 bg-el/30"/>}
+     </div>
+     {currentOpen&&currentTx.length>0&&<div className="space-y-1.5 border-t border-border/60 bg-el/40 px-3 py-2.5"><div className="mb-1 flex items-center justify-between gap-2"><p className="min-w-0 text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">{filter==='total'?'Todas as movimentações':'Movimentações filtradas'} de {monthHead(month)} · dia {row.date.slice(-2)}</p>{currentTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:currentKey,value:row.date})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}</div>
+       {currentTx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(tx,row.date)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(tx,row.date)}}} className="flex cursor-pointer items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2">
       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[tx.tipo].color}}><FluxTypeIcon tipo={tx.tipo} size={13}/></span>
       <span className="min-w-0 flex-1">
        <span className="block truncate text-[11px] font-semibold text-t1">{tx.descricao}</span>
@@ -138,7 +224,9 @@ function Saldos({month,focusRequest}:{month:Date;focusRequest:number}){
        ?<span className="flex shrink-0 items-center gap-1 rounded-full border border-red/20 bg-red/5 p-0.5"><button type="button" aria-label="Cancelar exclusão" onClick={()=>setDeleteId(null)} className="grid h-7 w-7 place-items-center rounded-full text-t3 transition active:scale-95"><X size={13}/></button><DangerButton aria-label={`Confirmar exclusão de ${tx.descricao}`} title={tx.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==tx.id)});setDeleteId(null)}} className="h-7 w-7"/></span>
        :<DangerButton aria-label={`Excluir ${tx.descricao}`} title={tx.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>tx.repete?setRecurrenceDelete({id:tx.id,date:row.date}):setDeleteId(tx.id)} className="h-7 w-7"/>}
      </div>})}
-    </div>}
+      </div>}
+       {currentOpen&&currentTx.length===0&&<>{transactionDetails(currentTx,row.date,monthHead(month))}{showDailyPlan&&row.planned>0&&<DailyPlanNotice value={row.planned}/>}</>}
+       {nextOpen&&<div className="space-y-1.5 border-t border-border/60 bg-el/40 px-3 py-2.5"><div className="mb-1 flex items-center justify-between gap-2"><p className="min-w-0 text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">{filter==='total'?'Todas as movimentações':'Movimentações filtradas'} de {monthHead(nextDate)} · dia {row.nextDate.slice(-2)}</p>{nextTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:monthKey(nextDate),value:row.nextDate})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}</div>{nextTx.length===0?<p className="rounded-[12px] border border-dashed border-border bg-surface/60 px-3 py-3 text-[10px] text-t3">Nenhuma entrada ou saída neste dia.</p>:nextTx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(tx,row.nextDate)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(tx,row.nextDate)}}} className="flex cursor-pointer items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[tx.tipo].color}}><FluxTypeIcon tipo={tx.tipo} size={13}/></span><span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-t1">{tx.descricao}</span><span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{tx.repete&&<IconRepeat size={9} strokeWidth={2.6}/>} {typeSingular[tx.tipo]}{txTags.map(tg=><span key={tg.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tg.cor,background:`${tg.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tg.label}</span>)}</span></span><Currency value={tx.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[tx.tipo].color}}/><DangerButton aria-label={`Excluir ${tx.descricao}`} title={tx.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={event=>{event.stopPropagation();tx.repete?setRecurrenceDelete({id:tx.id,date:row.nextDate}):setDeleteId(tx.id)}} className="h-7 w-7"/></div>})}</div>}
    </div>
   })}
   <div className="flux-closing bg-[linear-gradient(180deg,var(--surface),color-mix(in_srgb,var(--flux-orange)_7%,var(--el)))] px-4 pt-5">
@@ -160,6 +248,17 @@ function Saldos({month,focusRequest}:{month:Date;focusRequest:number}){
     <button type="button" onClick={()=>setRecurrenceDelete(null)} className="mt-2 h-11 w-full text-[12px] font-bold text-t2">Cancelar</button>
    </div>
   </div>}
+  {cardDayEditor&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65" onClick={()=>setCardDayEditor(null)}>
+   <div role="dialog" aria-label="Alterar dia dos cartões" className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.2)]" onClick={event=>event.stopPropagation()}>
+    <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+    <div className="mb-3 flex items-center gap-3 px-1"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-flux/10 text-flux"><IconCreditCard size={18}/></span><div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-flux">Lançamentos de cartão</p><h2 className="mt-0.5 truncate text-[17px] font-bold text-t1">Alterar dia</h2></div><button type="button" aria-label="Fechar" onClick={()=>setCardDayEditor(null)} className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-t2"><X size={15}/></button></div>
+    <p className="mb-3 rounded-[15px] border border-border bg-surface p-3 text-[10px] leading-relaxed text-t2">Somente os lançamentos de cartão de <b className="text-t1">{cardMonthLabel(cardDayEditor.monthKey)}</b> serão alterados. Os outros meses continuarão iguais.</p>
+    <div className="rounded-[18px] border border-border bg-surface p-3"><p className="mb-2 text-[9px] font-bold uppercase tracking-[.8px] text-t3">Novo dia no mês</p><AurvmDatePicker value={cardDayEditor.value} onChange={value=>{if(value.slice(0,7)===cardDayEditor.monthKey)setCardDayEditor(current=>current?{...current,value}:current)}} ariaLabel="Escolher novo dia dos cartões" accentColor="var(--flux-orange)" className="h-10 w-full justify-between bg-el/45 px-3"/><p className="mt-2 text-[9px] text-t3">Escolha uma data dentro de {cardMonthLabel(cardDayEditor.monthKey)}.</p></div>
+    <button type="button" onClick={()=>updateCardDay(cardDayEditor.monthKey,cardDayEditor.value)} className="mt-3 h-11 w-full rounded-[14px] bg-flux text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(255,105,36,.18)]">Aplicar somente neste mês</button>
+    {hasCardDayAdjustment(cardDayEditor.monthKey)&&<button type="button" onClick={()=>updateCardDay(cardDayEditor.monthKey,null)} className="mt-2 h-10 w-full rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Restaurar dia do vencimento</button>}
+    <button type="button" onClick={()=>setCardDayEditor(null)} className="mt-1 h-10 w-full text-[11px] font-bold text-t2">Cancelar</button>
+   </div>
+  </div>}
  </Card>
 }
 
@@ -176,7 +275,7 @@ function Totais({monthKey:key}:{monthKey:string}){
  const daysPassed=Math.max(1,currentMonth?today.getDate():totalDays);const remaining=Math.max(0,totalDays-daysPassed);const mediaDiaria=diario/daysPassed;const planejado=data.flux.valor_diario_planejado
  const positive=perf>=0;const resultColor=positive?'var(--green)':'var(--red)';const rawMonthName=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(Number(key.slice(0,4)),Number(key.slice(5,7))-1,1));const monthName=rawMonthName.charAt(0).toUpperCase()+rawMonthName.slice(1)
  const movementRows=(Object.keys(fluxMeta) as FluxTipo[]).map(type=>({type,value:sums(type)}))
- return <div className="space-y-3 pb-1">
+ return <div className="space-y-3">
   <section className="overflow-hidden rounded-[24px] border p-4 shadow-[0_12px_30px_rgba(70,40,24,.07)]" style={{borderColor:`color-mix(in srgb, ${resultColor} 18%, var(--border))`,background:`linear-gradient(145deg,color-mix(in srgb, ${resultColor} 12%, var(--surface)),var(--surface) 72%)`}}>
    <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2.5"><span className="grid h-10 w-10 place-items-center rounded-[13px] text-white" style={{background:resultColor}}><CalendarRange size={18}/></span><div><p className="text-[9px] font-extrabold uppercase tracking-[1px]" style={{color:resultColor}}>Resultado do mês</p><p className="mt-0.5 text-[11px] font-semibold text-t2">{monthName}</p></div></div><span className="rounded-full border border-border bg-surface/80 px-2.5 py-1 text-[8px] font-bold text-t3">{tx.length} movimentações</span></div>
    <div className="mt-4"><Currency value={perf} className="text-[32px] font-black tracking-[-1.4px]" style={{color:resultColor}}/><p className="mt-1 text-[10px] text-t2">{positive?'valor disponível depois de todos os compromissos':'valor que ultrapassou as entradas do mês'}</p></div>
@@ -334,20 +433,24 @@ function NewCard({close}:{close:()=>void}){
 
 function Horizon({close}:{close:()=>void}){
  const data=useFinancas(s=>s.data);const hidden=useFinancas(s=>s.valuesHidden);const limites=getLimites(data.flux.temperatura)
- let running=data.flux.saldo_inicial??0
- const months=Array.from({length:6},(_,i)=>new Date(2026,6+i,1)).map(start=>{
+ const today=new Date();today.setHours(0,0,0,0)
+ const dayNumber=(date:Date)=>Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())
+ const movementOn=(date:Date)=>data.flux.lancamentos.filter(l=>ocorreEm(l,localISO(date))).reduce((total,l)=>total+(l.tipo==='entrada'?l.valor:-l.valor),0)
+ let running=(data.flux.saldo_inicial??0)+movementOn(today)
+ const months=Array.from({length:6},(_,i)=>new Date(today.getFullYear(),today.getMonth()+i,1)).map(start=>{
   const total=new Date(start.getFullYear(),start.getMonth()+1,0).getDate()
   const dias=Array.from({length:total},(_,i)=>{
    const day=i+1
-   const date=`${monthKey(start)}-${String(day).padStart(2,'0')}`
-   data.flux.lancamentos.filter(l=>ocorreEm(l,date)).forEach(l=>{running+=l.tipo==='entrada'?l.valor:-l.valor})
    const dt=new Date(start.getFullYear(),start.getMonth(),day)
+   if(dayNumber(dt)>dayNumber(today))running+=movementOn(dt)-data.flux.valor_diario_planejado
+   else if(dayNumber(dt)===dayNumber(today))running=movementOn(today)+(data.flux.saldo_inicial??0)
    return{day,saldo:running,domingo:dt.getDay()===0,quinto:day===quintoDiaUtil(start),wd:new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(dt).replace('.','').slice(0,3)}
   })
   return{start,dias}
  })
- return <div className="absolute inset-0 z-50 overflow-auto bg-bg">
-  <header className="safe-top sticky top-0 z-10 flex items-center justify-between border-b border-border bg-bg/95 px-5 pb-4 backdrop-blur"><div><p className="text-[10px] font-bold uppercase tracking-wider text-flux">Horizonte</p><h2 className="mt-1 text-lg font-bold">Saldos futuros</h2></div><button onClick={close} className="grid h-9 w-9 place-items-center rounded-full bg-el"><X size={16}/></button></header>
+ return <div className="absolute inset-0 z-50 flex h-full min-w-0 flex-col overflow-hidden bg-bg">
+  <header className="safe-top flex shrink-0 items-center justify-between border-b border-border bg-bg/95 px-5 pb-4 backdrop-blur"><div><p className="text-[10px] font-bold uppercase tracking-wider text-flux">Horizonte</p><h2 className="mt-1 text-lg font-bold">Saldos futuros</h2></div><button onClick={close} className="grid h-9 w-9 place-items-center rounded-full bg-el"><X size={16}/></button></header>
+  <div className="min-h-0 flex-1 overflow-auto">
   <div className="flex w-max gap-2 p-4">
    {months.map(({start,dias})=><div key={String(start)} className="w-[168px]">
     <p className="mb-1.5 text-center text-[11px] font-bold uppercase tracking-wider text-t3">{new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit'}).format(start).replace('.','')}</p>
@@ -356,8 +459,9 @@ function Horizon({close}:{close:()=>void}){
       <span aria-label={quinto?`${day}, quinto dia útil`:undefined} className={cn('number flex items-center justify-center bg-el/50 py-[8px] text-[11px] font-bold',domingo?'text-red':'text-t2',quinto&&'bg-yellow/10')}><span className="inline-flex items-center gap-[3px]">{quinto&&<IconStarFilled size={7} className="shrink-0 text-yellow"/>}<span>{String(day).padStart(2,'0')}<span className="text-[9px] font-semibold opacity-70">/{wd}</span></span></span></span>
       <span className="number flex items-center justify-end pr-2 text-[11px] font-semibold" style={saldoStyle(saldo,limites)}>{hidden?'••••':money(saldo)}</span>
      </div>)}
-    </div>
-   </div>)}
+   </div>
+  </div>)}
+  </div>
   </div>
  </div>
 }
@@ -365,18 +469,67 @@ function Horizon({close}:{close:()=>void}){
 const typeSingular:Record<FluxTipo,string>={entrada:'entrada',saida:'saída',diario:'diário',economia:'economia',cartao:'gasto com cartão'}
 const typeHint:Record<FluxTipo,string>={entrada:'salário, comissão, vales',saida:'gastos fixos, boletos, aluguel',diario:'gastos variáveis, compras',economia:'reserva, investimento',cartao:'gastos ou total da fatura'}
 
-function NewTransaction({close}:{close:()=>void}){
- const {data,mutate}=useFinancas()
- const [type,setType]=useState<FluxTipo|null>(null)
- const [desc,setDesc]=useState('');const [value,setValue]=useState(0);const [tags,setTags]=useState<string[]>([])
- const [date,setDate]=useState(localISO(new Date()))
- const [repete,setRepete]=useState(false)
- const [vezes,setVezes]=useState(0)
+function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLancamento|null;occurrenceDate?:string}){
+  const {data,mutate}=useFinancas()
+  const [type,setType]=useState<FluxTipo|null>(edit?.tipo??null)
+  const [desc,setDesc]=useState(edit?.descricao??'');const [value,setValue]=useState(edit?.valor??0);const [tags,setTags]=useState<string[]>(edit?.tag_ids?.length?edit.tag_ids:edit?.tag_id?[edit.tag_id]:[])
+  const [date,setDate]=useState(edit?(occurrenceDate??edit.data):localISO(new Date()))
+  const [repete,setRepete]=useState(Boolean(edit?.repete))
+  const [frequencia,setFrequencia]=useState<RepeticaoFrequencia>(edit?.repete?.frequencia??'mensal')
+  const [vezes,setVezes]=useState(edit?.repete?.vezes??0)
+  const [installmentDraft,setInstallmentDraft]=useState(edit?.repete?.vezes?String(edit.repete.vezes):'')
+  const [installmentFocused,setInstallmentFocused]=useState(false)
+  const [dateScopeOpen,setDateScopeOpen]=useState(false)
  const cartoes:Cartao[]=data.flux.cartoes??[]
  const [cartaoId,setCartaoId]=useState(cartoes[0]?.id??'')
  const cartao=cartoes.find(c=>c.id===cartaoId)
  const color=type?fluxMeta[type].color:'var(--flux-orange)'
  const row='flex min-h-[56px] items-center gap-3 border-b border-border last:border-0'
+ const formOriginalDate=occurrenceDate??edit?.data
+ const formDateChanged=Boolean(edit?.repete&&formOriginalDate&&date!==formOriginalDate)
+ const formValueChanged=Boolean(edit?.repete&&edit&&value!==edit.valor)
+ const formRecurrenceChanged=Boolean(edit?.repete&&frequencia!==(edit.repete.frequencia??'mensal'))
+ const updateInstallments=(raw:string)=>{const draft=raw.replace(/\D/g,'').slice(0,3);setInstallmentDraft(draft);setVezes(draft?Math.min(120,Number(draft)):0)}
+ const selectInstallments=(months:number)=>{setInstallmentDraft(String(months));setVezes(months);setInstallmentFocused(false)}
+ const commitInstallments=()=>{const months=Math.min(120,Math.max(0,Number(installmentDraft)||0));setInstallmentDraft(months?String(months):'');setVezes(months);setInstallmentFocused(false)}
+ const saveTransaction=(scope:'one'|'future'|null=null)=>{
+  if(!type||!desc||!value)return
+  const selectedFormDate=occurrenceDate??edit?.data
+  const recurrenceRule:'data'|'quinto_util'=repete&&frequencia==='mensal'&&(isFifthBusinessDay(date)||(edit?.repete?.regra==='quinto_util'&&date===selectedFormDate))?'quinto_util':'data'
+  const nextRepete=repete?{vezes:vezes>0?vezes:null,frequencia,regra:recurrenceRule,...(edit?.repete?.excluidas?{excluidas:edit.repete.excluidas}: {})}:null
+  mutate(d=>{
+   if(!edit){d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags,repete:nextRepete});return}
+   const current=d.flux.lancamentos.find(item=>item.id===edit.id)
+   if(!current)return
+   const selectedDate=occurrenceDate??current.data
+   const dateChanged=Boolean(current.repete&&date!==selectedDate)
+   const valueChanged=Boolean(current.repete&&value!==current.valor)
+   const recurrenceChanged=dateChanged||valueChanged||formRecurrenceChanged
+   const fields={tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags}
+   if(scope==='one'&&recurrenceChanged&&current.repete){
+    current.repete.excluidas=Array.from(new Set([...(current.repete.excluidas??[]),selectedDate]))
+    d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:null})
+    return
+   }
+   if(scope==='future'&&recurrenceChanged&&current.repete){
+    const originalRepete=current.repete
+    const index=occurrenceDate?recurrenceOccurrenceIndex(current,occurrenceDate):0
+    if(index<=0){current.data=date;Object.assign(current,fields);current.repete=nextRepete;return}
+    current.repete={...originalRepete,vezes:originalRepete.vezes==null?index:Math.min(originalRepete.vezes,index),excluidas:originalRepete.excluidas?.filter(item=>item<selectedDate)}
+    const remaining=originalRepete.vezes==null?null:Math.max(1,originalRepete.vezes-index)
+    d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:repete?{vezes:remaining,regra:recurrenceRule}:null})
+    return
+   }
+   current.data=occurrenceDate&&occurrenceDate!==current.data?current.data:date
+   Object.assign(current,fields)
+   current.repete=nextRepete
+  })
+  close()
+ }
+ const submit=()=>{
+  if(edit?.repete&&(formDateChanged||formValueChanged||formRecurrenceChanged)){setDateScopeOpen(true);return}
+  saveTransaction()
+ }
  return <div className="absolute inset-0 z-50 flex items-end bg-black/70" onClick={close}>
   <div onClick={e=>e.stopPropagation()} className="safe-bottom max-h-[92%] w-full overflow-y-auto rounded-t-[28px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.18)]">
    <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-border"/>
@@ -392,7 +545,7 @@ function NewTransaction({close}:{close:()=>void}){
    </>:<>
     <div className="mb-3 flex items-center justify-between gap-3 px-1">
      <button type="button" aria-label="Voltar aos tipos" onClick={()=>setType(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-t2 transition active:scale-95"><ChevronLeft size={16}/></button>
-     <div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px]" style={{color}}>Nova movimentação</p><h2 className="truncate text-[17px] font-bold text-t1">Adicionar {typeSingular[type]}</h2></div>
+     <div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px]" style={{color}}>{edit?'Editar movimentação':'Nova movimentação'}</p><h2 className="truncate text-[17px] font-bold text-t1">{edit?'Editar':'Adicionar'} {typeSingular[type]}</h2></div>
      <button type="button" aria-label="Fechar" onClick={close} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-t2 transition active:scale-95"><X size={15}/></button>
     </div>
 
@@ -416,17 +569,29 @@ function NewTransaction({close}:{close:()=>void}){
      </div>
     </div>
 
-    <div className="mt-3 overflow-hidden rounded-[20px] border border-border bg-surface shadow-[0_8px_24px_rgba(70,40,24,.045)]">
+    <div className={cn('mt-3 rounded-[20px] border border-border bg-surface shadow-[0_8px_24px_rgba(70,40,24,.045)]',installmentFocused?'overflow-visible':'overflow-hidden')}>
      <div className="border-b border-border bg-el/25 px-4 py-2"><p className="text-[8px] font-extrabold uppercase tracking-[1px] text-t3">Organização</p></div>
-     <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconRepeat size={15}/></span><AurvmSelect ariaLabel="Repetição" value={repete?'mensal':'nao'} onChange={value=>setRepete(value==='mensal')} className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={[{value:'nao',label:'não repete',caption:'somente nesta data',icon:<IconCalendar size={13}/>,color:'var(--t2)'},{value:'mensal',label:'repete todo mês',caption:'lançamento recorrente',icon:<IconRepeat size={13}/>,color}]}/>{repete&&<span className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-t2">por<input aria-label="Quantidade de meses" type="number" min="0" max="120" value={vezes||''} placeholder="∞" onChange={e=>setVezes(Math.max(0,Math.min(120,Number(e.target.value)||0)))} className="no-spin w-8 bg-transparent text-center text-t1 outline-none"/>{vezes?(vezes===1?'mês':'meses'):'sem fim'}</span>}</div>
+     <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconRepeat size={15}/></span><AurvmSelect ariaLabel="Repetir" value={repete?frequencia:'nao'} onChange={value=>{if(value==='nao'){setRepete(false);return}setRepete(true);setFrequencia(value as RepeticaoFrequencia)}} className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={recurrenceOptions}/>{repete&&<div className="relative shrink-0"><label className="inline-flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-t2"><span>por</span><input aria-label={`Quantidade de ${frequencia==='semanal'?'semanas':frequencia==='diaria'?'dias':'meses'}`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3} value={installmentDraft} placeholder="∞" onFocus={()=>setInstallmentFocused(true)} onBlur={commitInstallments} onChange={e=>updateInstallments(e.target.value)} className="no-spin w-8 bg-transparent text-center text-t1 outline-none"/><span>{vezes?(vezes===1?(frequencia==='semanal'?'semana':frequencia==='diaria'?'dia':'mês'):(frequencia==='semanal'?'semanas':frequencia==='diaria'?'dias':'meses')):'sem fim'}</span></label>{installmentFocused&&<div role="listbox" aria-label={`Sugestões de ${frequencia==='semanal'?'semanas':frequencia==='diaria'?'dias':'meses'}`} className="absolute bottom-full right-0 z-30 mb-1 grid min-w-[188px] grid-cols-4 gap-1 rounded-[12px] border border-border bg-surface p-1.5 shadow-[0_12px_28px_rgba(0,0,0,.3)]">{recurrenceSuggestions.map(months=><button key={months} type="button" role="option" aria-label={`Usar ${months} ${frequencia==='semanal'?'semanas':frequencia==='diaria'?'dias':'meses'}`} onPointerDown={event=>event.preventDefault()} onClick={()=>selectInstallments(months)} className="h-8 rounded-[9px] bg-el/60 text-[11px] font-bold text-t2 transition hover:bg-el active:scale-95">{months}</button>)}</div>}</div>}</div>
     {type==='cartao'&&cartoes.length>0&&<>
      <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconCreditCard size={15}/></span><AurvmSelect ariaLabel="Cartão" value={cartaoId} onChange={value=>{setCartaoId(value);const selected=cartoes.find(card=>card.id===value);if(selected)setDate(localISO(cardBillingDates(selected).vencimento))}} className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={cartoes.map(card=>({value:card.id,label:card.nome,caption:`fecha dia ${card.fechamento} · vence dia ${card.vencimento}`,icon:<IconCreditCard size={13}/>,color}))}/></div>
      {cartao&&<><div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconCalendar size={15}/></span><span className="flex-1 text-[13px] font-semibold text-t1">fechamento da fatura</span><span className="number text-[12px] font-semibold text-t2">{shortDateLabel(cardBillingDates(cartao).fechamento)}</span></div><div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><CalendarRange size={15}/></span><span className="flex-1 text-[13px] font-semibold text-t1">vencimento no Flux</span><span className="number text-[12px] font-semibold text-flux">{shortDateLabel(cardBillingDates(cartao).vencimento)}</span></div></>}
      </>}
      <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconTag size={15}/></span><AurvmSelect ariaLabel="Tags" multiple values={tags} onValuesChange={setTags} placeholder="Sem tag" searchable searchPlaceholder="Buscar tag" className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={[{value:'',label:'Sem tag',caption:'não categorizar',icon:<IconTag size={13}/>,color:'var(--t3)'},...data.flux.tags.filter(t=>!t.oculta).map(item=>({value:item.id,label:item.label,caption:'tag de movimentação',icon:<IconTag size={13}/>,color:item.cor}))]}/></div>
     </div>
-    <button disabled={!desc||!value} onClick={()=>{mutate(d=>d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags,...(repete?{repete:{vezes:vezes>0?vezes:null}}:{})}));close()}} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>adicionar {typeSingular[type]}</button>
+     <button disabled={!desc||!value} onClick={submit} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>{edit?'salvar alterações':`adicionar ${typeSingular[type]}`}</button>
     <button onClick={close} className="mt-2 h-10 w-full text-sm font-bold text-t2 transition active:scale-95">cancelar</button>
+   {dateScopeOpen&&<div className="fixed inset-0 z-[80] flex items-end bg-black/70" onClick={()=>setDateScopeOpen(false)}>
+    <div onClick={event=>event.stopPropagation()} className="safe-bottom w-full rounded-t-[26px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.2)]">
+     <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+     <div className="mb-3 flex items-center gap-3 px-1"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-flux/10 text-flux"><IconRepeat size={18}/></span><div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-flux">Lançamento recorrente</p><h2 className="mt-0.5 text-[17px] font-bold text-t1">Aplicar alteração</h2></div></div>
+     <p className="mb-3 px-1 text-[10px] leading-relaxed text-t2">Escolha se a alteração deve valer somente para esta ocorrência ou também para os próximos lançamentos.</p>
+     <div className="overflow-hidden rounded-[20px] border border-border bg-surface">
+      <button type="button" onClick={()=>{setDateScopeOpen(false);saveTransaction('one')}} className="flex w-full items-center border-b border-border px-4 py-4 text-left transition active:bg-el/60"><span className="flex-1"><span className="block text-[12px] font-bold text-t1">Somente este</span><span className="mt-1 block text-[9px] text-t3">Mantém as outras ocorrências como estão</span></span><ChevronRight size={15} className="text-t3"/></button>
+      <button type="button" onClick={()=>{setDateScopeOpen(false);saveTransaction('future')} } className="flex w-full items-center px-4 py-4 text-left transition active:bg-el/60"><span className="flex-1"><span className="block text-[12px] font-bold text-t1">Este e os próximos</span><span className="mt-1 block text-[9px] text-t3">Mantém somente as ocorrências anteriores</span></span><ChevronRight size={15} className="text-t3"/></button>
+     </div>
+     <button type="button" onClick={()=>setDateScopeOpen(false)} className="mt-2 h-11 w-full text-[12px] font-bold text-t2">Cancelar</button>
+    </div>
+   </div>}
    </>}
   </div>
  </div>

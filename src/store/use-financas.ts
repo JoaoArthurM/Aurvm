@@ -20,6 +20,7 @@ type Store = {
   replaceData: (data: FinancasData) => void
   mutate: (recipe: (draft: FinancasData) => void) => void
   connect: () => Promise<void>
+  syncNow: () => Promise<void>
   restore: () => Promise<void>
   disconnect: () => Promise<void>
   loginDemo: () => void
@@ -91,7 +92,7 @@ export const useFinancas = create<Store>((set, get) => {
     editRevision++
     persistLocalBackup(data,latestSavedAt)
     set({lastBackupAt:latestSavedAt})
-    scheduleSync()
+    scheduleSync(0)
   }
   const useBackup=(record:{data:FinancasData;updatedAt:number})=>{
     const data=normalizeData(record.data)
@@ -134,6 +135,22 @@ export const useFinancas = create<Store>((set, get) => {
     const account = await driveService.signIn()
     set({ connected: true, signedIn:true, accountName: account.name, syncStatus: 'syncing' })
     await reconcileRemote()
+  },
+  syncNow: async () => {
+    if (!get().connected || syncInFlight) return
+    clearTimeout(syncTimer)
+    syncInFlight = true
+    const revision = editRevision
+    set({ syncStatus: 'syncing' })
+    try {
+      await reconcileRemote()
+    } catch (error) {
+      set({ syncStatus: 'error' })
+      throw error
+    } finally {
+      syncInFlight = false
+      if (revision !== editRevision && get().connected) scheduleSync(0)
+    }
   },
   restore: async () => {
     const device=await loadDeviceBackup()

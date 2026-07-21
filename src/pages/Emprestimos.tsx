@@ -1,8 +1,10 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import {
   IconBell as Bell,
   IconCheck as Check,
   IconChevronDown as ChevronDown,
+  IconTrash,
+  IconX,
 } from '@tabler/icons-react'
 import { AurvmDatePicker } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
@@ -14,11 +16,34 @@ import { cn, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 
 const paidGreen = '#238A5B'
+const personPalette = ['#8B5CF6','#10B981','#F59E0B','#3B82F6','#E84D55','#EC4899','#06B6D4','#84CC16']
+const uniquePersonColors = (people: Pessoa[]) => {
+  const used = new Set<string>()
+  return people.map((person,index) => {
+    const current = person.cor?.toLowerCase()
+    const color = current && !used.has(current) ? person.cor : personPalette.find(candidate => !used.has(candidate.toLowerCase())) ?? `hsl(${(index * 137.5) % 360} 70% 50%)`
+    used.add(color.toLowerCase())
+    return color
+  })
+}
+const nextPersonColor = (people: Pessoa[]) => {
+  const used = new Set(people.map(person => person.cor?.toLowerCase()))
+  return personPalette.find(color => !used.has(color.toLowerCase())) ?? `hsl(${(people.length * 137.5) % 360} 70% 50%)`
+}
 
 export function Emprestimos() {
   const { data, mutate } = useFinancas()
+  const personColors = uniquePersonColors(data.emprestimos.pessoas)
+  const people = data.emprestimos.pessoas.map((person,index) => ({ ...person, cor: personColors[index] }))
+  useEffect(() => {
+    if (data.emprestimos.pessoas.some((person,index) => person.cor !== personColors[index])) {
+      mutate(draft => draft.emprestimos.pessoas.forEach((person,index) => { person.cor = personColors[index] }))
+    }
+  }, [data.emprestimos.pessoas, mutate, personColors])
   const [active, setActive] = useState(data.emprestimos.pessoas[0]?.id ?? '')
   const [adding, setAdding] = useState(false)
+  const [personToDelete, setPersonToDelete] = useState<Pessoa|null>(null)
+  const [loanToDelete, setLoanToDelete] = useState<{ person: Pessoa; loan: LancamentoPessoa }|null>(null)
   const allLoans = data.emprestimos.pessoas.flatMap((person) => person.lancamentos)
   const pending = allLoans.filter((loan) => !loan.pago)
   const received = allLoans.filter((loan) => loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
@@ -39,7 +64,7 @@ export function Emprestimos() {
       />
       <div className="space-y-[10px] px-4">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {data.emprestimos.pessoas.map((person) => {
+          {people.map((person) => {
             const amount = person.lancamentos.filter((loan) => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
             const selected = active === person.id
 
@@ -76,7 +101,7 @@ export function Emprestimos() {
 
         <section>
           <div className="space-y-[10px]">
-            {data.emprestimos.pessoas.map((person) => <PersonCard key={person.id} person={person} />)}
+            {people.map((person) => <PersonCard key={person.id} person={person} onRequestDelete={()=>setPersonToDelete(person)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person, loan })} />)}
           </div>
         </section>
 
@@ -91,7 +116,7 @@ export function Emprestimos() {
                   mutate((draft) => draft.emprestimos.pessoas.push({
                     id: uid(),
                     nome: name,
-                    cor: ['#8B5CF6', '#10B981', '#F59E0B', '#3B82F6'][draft.emprestimos.pessoas.length % 4],
+                    cor: nextPersonColor(draft.emprestimos.pessoas),
                     lancamentos: [],
                   }))
                   setAdding(false)
@@ -101,16 +126,32 @@ export function Emprestimos() {
             <p className="mt-2 text-[9px] text-t3">Pressione Enter para adicionar</p>
           </Card>
         ) : (
-          <div className="mb-3 flex justify-end">
+          <div className="flex justify-end">
             <AddButton onClick={() => setAdding(true)}>Nova pessoa</AddButton>
           </div>
         )}
+        {personToDelete&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setPersonToDelete(null)}>
+          <div role="alertdialog" aria-label={`Confirmar exclusão de ${personToDelete.nome}`} className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
+            <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-red/10 text-red"><IconTrash size={19}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-red">Excluir pessoa</p><h2 className="mt-0.5 truncate text-[17px] font-bold text-t1">Excluir {personToDelete.nome}?</h2></div><button type="button" aria-label="Fechar" onClick={()=>setPersonToDelete(null)} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-el text-t3"><IconX size={15}/></button></div>
+            <p className="mt-4 rounded-[15px] border border-border bg-surface p-3 text-[10px] leading-relaxed text-t2">A pessoa e todos os seus lançamentos serão removidos. Essa ação não pode ser desfeita.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setPersonToDelete(null)} className="h-11 rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Cancelar</button><button type="button" onClick={()=>{const id=personToDelete.id;mutate(draft=>{draft.emprestimos.pessoas=draft.emprestimos.pessoas.filter(person=>person.id!==id)});setPersonToDelete(null)}} className="h-11 rounded-[14px] bg-red text-[11px] font-bold text-white">Excluir pessoa</button></div>
+          </div>
+        </div>}
+        {loanToDelete&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setLoanToDelete(null)}>
+          <div role="alertdialog" aria-label={`Confirmar exclusão de ${loanToDelete.loan.motivo}`} className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
+            <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-red/10 text-red"><IconTrash size={19}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-red">Excluir lançamento</p><h2 className="mt-0.5 truncate text-[17px] font-bold text-t1">Excluir {loanToDelete.loan.motivo}?</h2></div><button type="button" aria-label="Fechar" onClick={()=>setLoanToDelete(null)} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-el text-t3"><IconX size={15}/></button></div>
+            <p className="mt-4 rounded-[15px] border border-border bg-surface p-3 text-[10px] leading-relaxed text-t2">O lançamento de {loanToDelete.person.nome} no valor de <Currency value={loanToDelete.loan.valor} /> será removido. Essa ação não pode ser desfeita.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setLoanToDelete(null)} className="h-11 rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Cancelar</button><button type="button" onClick={()=>{const { person, loan } = loanToDelete;mutate(draft=>{const currentPerson=draft.emprestimos.pessoas.find(item=>item.id===person.id);if(currentPerson)currentPerson.lancamentos=currentPerson.lancamentos.filter(item=>item.id!==loan.id)});setLoanToDelete(null)}} className="h-11 rounded-[14px] bg-red text-[11px] font-bold text-white">Excluir lançamento</button></div>
+          </div>
+        </div>}
       </div>
     </div>
   )
 }
 
-function PersonCard({ person }: { person: Pessoa }) {
+function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pessoa;onRequestDelete:()=>void;onRequestDeleteLoan:(loan:LancamentoPessoa)=>void }) {
   const mutate = useFinancas((state) => state.mutate)
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -146,9 +187,7 @@ function PersonCard({ person }: { person: Pessoa }) {
         {open&&<DangerButton
           className="mr-1"
           aria-label={`Excluir ${person.nome}`}
-          onClick={() => mutate((draft) => {
-            draft.emprestimos.pessoas = draft.emprestimos.pessoas.filter((item) => item.id !== person.id)
-          })}
+          onClick={onRequestDelete}
         />}
         <button aria-label={open?'Recolher pessoa':'Expandir pessoa'} onClick={() => setOpen((value) => !value)} className="mr-2 grid h-10 w-8 shrink-0 place-items-center rounded-[10px] text-t3 transition active:bg-el/60">
           <ChevronDown size={16} className={cn('transition', open && 'rotate-180')} />
@@ -177,9 +216,19 @@ function PersonCard({ person }: { person: Pessoa }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className={cn('truncate text-xs font-semibold', loan.pago && 'line-through')}>{loan.motivo}</p>
-                    <p className="mt-1 text-[9px] text-t3">
-                      {new Date(`${loan.data}T12:00:00`).toLocaleDateString('pt-BR')}
-                    </p>
+                    <AurvmDatePicker
+                      value={loan.data}
+                      onChange={(date) => mutate((draft) => {
+                        const current = draft.emprestimos.pessoas
+                          .find((item) => item.id === person.id)?.lancamentos
+                          .find((item) => item.id === loan.id)
+                        if (current) current.data = date
+                      })}
+                      ariaLabel={`Editar data de ${loan.motivo}`}
+                      accentColor={person.cor}
+                      compact
+                      className="mt-0.5 h-6 border-0 bg-transparent px-0 text-[9px] font-medium text-t3"
+                    />
                   </div>
                   <Currency value={loan.valor} className="shrink-0 text-sm font-black" style={{ color: person.cor }} />
                 </div>
@@ -214,10 +263,7 @@ function PersonCard({ person }: { person: Pessoa }) {
                   </button>
                   <DangerButton
                     aria-label={`Excluir ${loan.motivo}`}
-                    onClick={() => mutate((draft) => {
-                      const currentPerson = draft.emprestimos.pessoas.find((item) => item.id === person.id)
-                      if (currentPerson) currentPerson.lancamentos = currentPerson.lancamentos.filter((item) => item.id !== loan.id)
-                    })}
+                    onClick={() => onRequestDeleteLoan(loan)}
                   />
                 </div>
                 {reminderLoanId===loan.id&&<LoanReminder personId={person.id} loan={loan} done={()=>setReminderLoanId(null)}/>}

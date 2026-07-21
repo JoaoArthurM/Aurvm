@@ -30,9 +30,13 @@ button { -webkit-user-select: none; user-select: none; }
 .no-spin::-webkit-inner-spin-button { appearance: none; }
 .chart-tooltip { border: 1px solid var(--border) !important; border-radius: 12px !important; background: var(--el) !important; box-shadow: 0 10px 30px #0008; }
 .app-scroll { height:100dvh; padding-top:max(10px, env(safe-area-inset-top)); padding-bottom:96px; }
-.app-scroll.flux-scroll { padding-bottom:calc(60px + max(10px, env(safe-area-inset-bottom))); }
+.app-scroll.flux-scroll { padding-bottom:96px; }
+/* The scroll container owns the clearance below the last component. */
+.app-scroll > .pb-4 { padding-bottom:0; }
+.app-scroll > .pb-4 > section:last-child { margin-bottom:0; }
+.app-scroll > .page > .space-y-3.px-4 > section:last-child { padding-bottom:0; }
 .flux-closing {
-  padding-bottom:calc(84px + max(10px, env(safe-area-inset-bottom)));
+  padding-bottom:calc(60px + max(10px, env(safe-area-inset-bottom)));
   margin-bottom:calc(-60px - max(10px, env(safe-area-inset-bottom)));
 }
 .flux-tabs-sticky {

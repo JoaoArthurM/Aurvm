@@ -35,8 +35,12 @@ export const projectSavings = (data: FinancasData, months = 24): ProjectionPoint
   let accumulated = data.perfil.saldo_inicial
   const now = new Date()
   return Array.from({ length: months }, (_, index) => {
-    const key = monthKey(addMonths(now, index))
-    const extras = data.economias.filter((item) => isEconomiaInMonth(item, key, index))
+    // A projeção representa os próximos meses; o mês em andamento não entra na tabela nem no acumulado.
+    const key = monthKey(addMonths(now, index + 1))
+    const extras = data.economias.flatMap((item) => {
+      const occurrences = economiaOccurrencesInMonth(item, key, index)
+      return occurrences > 0 ? [{ ...item, valor: item.valor * occurrences }] : []
+    })
     const breakdown = [{ label: 'Economia mensal', valor: data.perfil.economia_mensal }, ...extras.map(({ label, valor }) => ({ label, valor }))]
     const entrou = breakdown.reduce((acc, item) => acc + item.valor, 0)
     accumulated += entrou
@@ -44,34 +48,65 @@ export const projectSavings = (data: FinancasData, months = 24): ProjectionPoint
   })
 }
 
-const isEconomiaInMonth = (item: Economia, key: string, index: number) => {
-  if (item.tipo === 'recorrente') return true
-  if (item.tipo === 'parcelado') return index < (item.vezes ?? 0)
-  return item.mes === key
+const daysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate()
+const economiaOccurrencesInMonth = (item: Economia, key: string, index: number) => {
+  const [year, month] = key.split('-').map(Number)
+  if (item.tipo === 'pontual' || item.frequencia === 'nenhuma') return item.mes === key ? 1 : 0
+  if (item.tipo === 'parcelado') return index < (item.vezes ?? 0) ? 1 : 0
+  if (item.vezes != null && index >= item.vezes) return 0
+  const frequency = item.frequencia ?? 'mensal'
+  if (frequency === 'diaria') return daysInMonth(year, month)
+  if (frequency === 'semanal') return Math.ceil(daysInMonth(year, month) / 7)
+  return 1
 }
 
-// Recorrência de lançamentos do Flux: repetem mensalmente no mesmo dia (limitado ao último dia do mês).
-// diff em meses desde a data original; vezes = total de ocorrências, null = sem fim.
+const isEconomiaInMonth = (item: Economia, key: string, index: number) => economiaOccurrencesInMonth(item, key, index) > 0
+
+export const quintoDiaUtil=(d:Date)=>{const total=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();let uteis=0;for(let day=1;day<=total;day++){const wd=new Date(d.getFullYear(),d.getMonth(),day).getDay();if(wd!==0){uteis++;if(uteis===5)return day}}return 0}
 const monthDiff = (l: FluxLancamento, year: number, month: number) => {
   const [ly, lm] = l.data.split('-').map(Number)
   return (year - ly) * 12 + (month - lm)
 }
-export const ocorreNoMes = (l: FluxLancamento, key: string) => {
-  const [y, m] = key.split('-').map(Number)
-  const diff = monthDiff(l, y, m)
-  if (l.repete?.excluidas?.some(date => date.startsWith(`${key}-`))) return false
-  if (diff === 0) return true
-  if (!l.repete || diff < 0) return false
-  return l.repete.vezes == null || diff < l.repete.vezes
+const dayDiff = (from: string, to: string) => {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number)
+  const [toYear, toMonth, toDay] = to.split('-').map(Number)
+  return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86400000)
 }
-export const ocorreEm = (l: FluxLancamento, date: string) => {
+export const recurrenceOccurrenceIndex = (l: FluxLancamento, date: string) => {
+  if (date === l.data) return 0
+  const frequency = l.repete?.frequencia ?? 'mensal'
+  if (frequency === 'diaria') return dayDiff(l.data, date)
+  if (frequency === 'semanal') {
+    const days = dayDiff(l.data, date)
+    return days >= 0 && days % 7 === 0 ? days / 7 : -1
+  }
+  const [year, month] = date.split('-').map(Number)
+  return monthDiff(l, year, month)
+}
+const ocorreNaData = (l: FluxLancamento, date: string) => {
   if (l.repete?.excluidas?.includes(date)) return false
+  const [y, m, d] = date.split('-').map(Number)
+  const month = `${y}-${String(m).padStart(2, '0')}`
+  const cardAdjustment = l.tipo === 'cartao' ? l.cartao?.ajustes?.[month] : undefined
+  if (cardAdjustment) {
+    if (!l.repete) return l.data.slice(0, 7) === month && cardAdjustment === date
+    const index = recurrenceOccurrenceIndex(l, date)
+    if (index < 0 || (l.repete.vezes != null && index >= l.repete.vezes)) return false
+    return cardAdjustment === date
+  }
   if (l.data === date) return true
   if (!l.repete) return false
-  const [y, m, d] = date.split('-').map(Number)
-  if (!ocorreNoMes(l, date.slice(0, 7)) || monthDiff(l, y, m) <= 0) return false
+  const index = recurrenceOccurrenceIndex(l, date)
+  if (index <= 0 || (l.repete.vezes != null && index >= l.repete.vezes)) return false
+  if (l.repete.frequencia === 'diaria' || l.repete.frequencia === 'semanal') return true
   const dia = Number(l.data.slice(8, 10))
-  return d === Math.min(dia, new Date(y, m, 0).getDate())
+  const esperado = l.repete.regra === 'quinto_util' ? quintoDiaUtil(new Date(y,m-1,1)) : Math.min(dia, new Date(y, m, 0).getDate())
+  return d === esperado
+}
+export const ocorreEm = (l: FluxLancamento, date: string) => ocorreNaData(l, date)
+export const ocorreNoMes = (l: FluxLancamento, key: string) => {
+  const [year, month] = key.split('-').map(Number)
+  return Array.from({ length: daysInMonth(year, month) }, (_, index) => `${key}-${String(index + 1).padStart(2, '0')}`).some(date => ocorreNaData(l, date))
 }
 
 export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: string }> = {
@@ -86,13 +121,13 @@ export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: st
 // As cores são fixas; os 6 limites entre faixas são editáveis em flux.temperatura.limites (base: salário da pessoa).
 export type TemperaturaLimites = number[]
 export const tempTiers = [
-  { label: 'Muito Negativo', bg: '#B7432D', fg: '#FFFFFF' },
-  { label: 'Negativo', bg: '#F4CCCC', fg: '#A61C00' },
-  { label: 'Cuidado', bg: '#FFF2CC', fg: '#B45F06' },
-  { label: 'Muita Atenção', bg: '#FFF2CC', fg: '#E69138' },
-  { label: 'Atenção', bg: '#FFE599', fg: '#7F6000' },
-  { label: 'Saudável', bg: '#D9EAD3', fg: '#38761D' },
-  { label: 'Muito Saudável', bg: '#38761D', fg: '#FFFFFF' },
+  { label: 'Muito Negativo', bg: '#B84530', fg: '#FFFFFF' },
+  { label: 'Negativo', bg: '#F5CCCC', fg: '#A7200A' },
+  { label: 'Cuidado', bg: '#FEF3CD', fg: '#C04A2A' },
+  { label: 'Muita Atenção', bg: '#FEF3CD', fg: '#E6943E' },
+  { label: 'Atenção', bg: '#FDE79C', fg: '#7E620B' },
+  { label: 'Saudável', bg: '#D8EBD3', fg: '#307721' },
+  { label: 'Muito Saudável', bg: '#307721', fg: '#FFFFFF' },
 ] as const
 export const defaultLimites: TemperaturaLimites = [-100, 0, 100, 300, 1000, 2000]
 export const getLimites = (t?: { limites?: number[] }): TemperaturaLimites => Array.isArray(t?.limites) && t.limites.length === tempTiers.length - 1 ? t.limites : defaultLimites

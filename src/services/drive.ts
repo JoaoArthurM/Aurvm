@@ -1,21 +1,125 @@
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
+import { Capacitor } from '@capacitor/core'
 import type { FinancasData } from '../lib/types'
 import { isFinancasData, type BackupRecord } from './local-backup'
 
 const FILE_NAME = 'financas.json'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const WEB_SCOPES = ['openid', 'email', 'profile', DRIVE_SCOPE].join(' ')
 let accessToken: string | null = null
 let fileId: string | null = null
+let webScriptPromise: Promise<void> | null = null
+
+type WebTokenResponse = {
+  access_token?: string
+  error?: string
+  error_description?: string
+}
+
+type WebTokenClient = {
+  requestAccessToken: (overrideConfig?: { prompt?: '' | 'select_account' }) => void
+}
+
+type GoogleIdentityServices = {
+  accounts: {
+    oauth2: {
+      initTokenClient: (options: {
+        client_id: string
+        scope: string
+        callback: (response: WebTokenResponse) => void
+        error_callback?: (error: { type?: string }) => void
+      }) => WebTokenClient
+      revoke?: (token: string, callback: () => void) => void
+    }
+  }
+}
+
+declare global {
+  interface Window {
+    google?: GoogleIdentityServices
+  }
+}
+
+const isNative = () => Capacitor.isNativePlatform()
+
+function webClientId() {
+  const clientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID
+  if (!clientId || clientId.startsWith('seu-client-id')) {
+    throw new Error('Configure VITE_GOOGLE_WEB_CLIENT_ID para ativar o Google Login.')
+  }
+  return clientId
+}
+
+async function loadWebGoogle() {
+  if (window.google?.accounts?.oauth2) return
+  webScriptPromise ??= new Promise<void>((resolve, reject) => {
+    const existing = document.getElementById('google-identity-services') as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Nao foi possivel carregar o login do Google.')), { once: true })
+      return
+    }
+    const script = document.createElement('script')
+    script.id = 'google-identity-services'
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Nao foi possivel carregar o login do Google.'))
+    document.head.appendChild(script)
+  })
+  await webScriptPromise
+  if (!window.google?.accounts?.oauth2) throw new Error('O login do Google nao ficou disponivel no navegador.')
+}
+
+async function requestWebAccessToken(prompt: '' | 'select_account') {
+  await loadWebGoogle()
+  const clientId = webClientId()
+  return new Promise<string>((resolve, reject) => {
+    const tokenClient = window.google!.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: WEB_SCOPES,
+      callback: (response) => {
+        if (response.error || !response.access_token) {
+          reject(new Error(response.error_description || response.error || 'Nao foi possivel entrar com o Google.'))
+          return
+        }
+        resolve(response.access_token)
+      },
+      error_callback: (error) => reject(new Error(error.type || 'Nao foi possivel abrir o login do Google.')),
+    })
+    tokenClient.requestAccessToken({ prompt })
+  })
+}
+
+async function fetchGoogleProfile(token: string) {
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) throw new Error('Nao foi possivel carregar os dados da conta Google.')
+  const profile = await response.json() as { name?: string; email?: string }
+  return { name: profile.name ?? profile.email ?? 'Google', email: profile.email ?? '' }
+}
 
 export const driveService = {
   async initialize() {
     const clientId=import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID
     if(!clientId||clientId.startsWith('seu-client-id'))throw new Error('Configure VITE_GOOGLE_WEB_CLIENT_ID para ativar o Google Login.')
+    if (!isNative()) {
+      await loadWebGoogle()
+      return true
+    }
     await GoogleAuth.initialize({ clientId, scopes: ['profile','email',DRIVE_SCOPE], grantOfflineAccess: false })
     return true
   },
 
   async signIn() {
+    if (!isNative()) {
+      const token = await requestWebAccessToken('select_account')
+      const profile = await fetchGoogleProfile(token)
+      accessToken = token
+      return profile
+    }
     const user = await GoogleAuth.signIn()
     accessToken = user.authentication.accessToken
     return { name: user.name ?? user.email, email: user.email }
@@ -24,6 +128,12 @@ export const driveService = {
   async restoreSession() {
     try {
       await this.initialize()
+      if (!isNative()) {
+        const token = await requestWebAccessToken('')
+        await fetchGoogleProfile(token)
+        accessToken = token
+        return true
+      }
       const authentication = await GoogleAuth.refresh()
       accessToken = authentication.accessToken
       return true
@@ -31,7 +141,10 @@ export const driveService = {
   },
 
   async signOut() {
-    await GoogleAuth.signOut()
+    if (isNative()) await GoogleAuth.signOut()
+    else if (accessToken && window.google?.accounts?.oauth2.revoke) {
+      await new Promise<void>(resolve => window.google!.accounts.oauth2.revoke!(accessToken!, resolve))
+    }
     accessToken = null
     fileId = null
   },

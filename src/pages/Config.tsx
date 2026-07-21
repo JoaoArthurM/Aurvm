@@ -30,7 +30,7 @@ const startScreenMeta:Record<Tab,{caption:string;icon:ReactNode;color:string}>={
 }
 
 export function Config(){
-  const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,logout}=useFinancas()
+  const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,syncNow,logout}=useFinancas()
   const [error,setError]=useState('')
   const [backupStatus,setBackupStatus]=useState<{type:'success'|'error';text:string}|null>(null)
   const [dragging,setDragging]=useState<Tab|null>(null)
@@ -56,6 +56,11 @@ export function Config(){
       replaceData(structuredClone(candidate))
       setBackupStatus({type:'success',text:'Backup importado. Todos os dados foram restaurados.'})
     }catch{setBackupStatus({type:'error',text:'Arquivo inválido. Escolha um backup JSON gerado pelo Aurvm.'})}
+  }
+  const synchronizeNow=async()=>{
+    if(!connected||busy)return
+    setError('')
+    try{await syncNow()}catch(error){setError(error instanceof Error?error.message:'Falha ao sincronizar')}
   }
   const setTheme=(tema:'light'|'dark')=>mutate(d=>{d.config.tema=tema})
   const navigationItems=data.config.navegacao??defaultNavigation
@@ -97,7 +102,7 @@ export function Config(){
     setDragging(null)
   }
 
-  return <div className="page min-h-full pb-4 font-sans">
+  return <div className="page min-h-full font-sans">
     <PageHeader eyebrow="Preferências" title="Configurações" subtitle="Deixe o Aurvm com a sua cara."/>
 
     <div className="space-y-5 px-4">
@@ -119,6 +124,12 @@ export function Config(){
             <div className="px-4 py-3"><span className="block text-t3">Google Drive</span><span className={cn('mt-1 block font-semibold',syncStatus==='error'?'text-red':connected?'text-green':'text-t3')}>{!connected?'Não conectado':syncStatus==='syncing'?'Sincronizando…':syncStatus==='error'?'Falha ao sincronizar':lastSyncAt?`Sincronizado às ${new Date(lastSyncAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Conectado'}</span></div>
           </div>
           <div className="flex items-center gap-2 border-t border-border px-4 py-3 text-[9px] text-t3"><IconShieldCheck size={13} className="text-accent"/>Acesso limitado drive.file · somente arquivos criados pelo Aurvm</div>
+          <div className="border-t border-border p-3">
+            <button type="button" disabled={!connected||busy} onClick={synchronizeNow} className="glass-action glass-accent flex w-full items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"><IconRefresh size={15} className={busy?'animate-spin':''}/></span>
+              <span className="min-w-0 flex-1"><span className="block text-[10px] font-bold text-t1">Sincronizar agora</span><span className="mt-0.5 block text-[8px] text-t3">{connected?'Atualizar financas.json no Google Drive':'Conecte o Google Drive para sincronizar'}</span></span>
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2 border-t border-border p-3">
             <button type="button" onClick={exportBackup} className="glass-action glass-neutral flex min-w-0 items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-green/10 text-green"><IconDownload size={15}/></span><span className="min-w-0"><span className="block text-[10px] font-bold text-t1">Exportar</span><span className="mt-0.5 block text-[8px] text-t3">Salvar JSON</span></span></button>
             <button type="button" onClick={()=>backupInputRef.current?.click()} className="glass-action glass-accent flex min-w-0 items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"><IconUpload size={15}/></span><span className="min-w-0"><span className="block text-[10px] font-bold text-t1">Importar</span><span className="mt-0.5 block text-[8px] text-t3">Abrir JSON</span></span></button>

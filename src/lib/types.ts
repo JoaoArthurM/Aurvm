@@ -1,11 +1,12 @@
 export type Item = { id: string; label: string; valor: number; emoji?: string | null; lembrete?: { data: string; observacao: string } | null }
-export type Economia = { id: string; label: string; valor: number; tipo: 'recorrente' | 'parcelado' | 'pontual'; vezes: number | null; mes: string | null }
+export type RepeticaoFrequencia = 'mensal' | 'semanal' | 'diaria'
+export type Economia = { id: string; label: string; valor: number; tipo: 'recorrente' | 'parcelado' | 'pontual'; vezes: number | null; mes: string | null; frequencia?: RepeticaoFrequencia | 'nenhuma' | null }
 export type LancamentoPessoa = { id: string; data: string; motivo: string; valor: number; pago: boolean; lembrete?: { data: string; observacao: string } | null }
 export type Pessoa = { id: string; nome: string; cor: string; lancamentos: LancamentoPessoa[] }
 export type Tag = { id: string; label: string; cor: string; oculta?: boolean }
 export type FluxTipo = 'entrada' | 'saida' | 'diario' | 'economia' | 'cartao'
 // repete: recorrência mensal a partir de `data` — vezes = total de ocorrências (incluindo a primeira); null = sem definição (repete para sempre).
-export type FluxLancamento = { id: string; data: string; tipo: FluxTipo; valor: number; descricao: string; tag_id: string | null; tag_ids?: string[]; repete?: { vezes: number | null; excluidas?: string[] } | null }
+export type FluxLancamento = { id: string; data: string; tipo: FluxTipo; valor: number; descricao: string; tag_id: string | null; tag_ids?: string[]; repete?: { vezes: number | null; excluidas?: string[]; frequencia?: RepeticaoFrequencia; regra?: 'data'|'quinto_util' } | null; cartao?: { ajustes?: Record<string, string> } }
 export type Cartao = { id: string; nome: string; fechamento: number; vencimento: number }
 export type Tab = 'inicio' | 'tabela' | 'economia' | 'emprestimos' | 'flux' | 'config'
 export type NavigationPreference = { id: Tab; visivel: boolean }
@@ -15,6 +16,7 @@ export type AppPreferences = {
   flux_aba?: 'saldos' | 'totais' | 'tags' | 'menu'
   flux_filtro?: 'total' | FluxTipo
   flux_tags_ordenacao?: 'valor' | 'nome'
+  flux_mostrar_planejamento_diario?: boolean
 }
 
 export interface FinancasData {

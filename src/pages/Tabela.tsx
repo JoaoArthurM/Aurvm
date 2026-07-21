@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { IconBell as Bell, IconChevronRight as ChevronRight } from '@tabler/icons-react'
-import { AurvmDatePicker } from '../components/AurvmControls'
+import { IconChevronRight as ChevronRight } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { SunriseHero } from '../components/SunriseHero'
 import { SubscriptionEditor, SubscriptionLogo } from '../components/SubscriptionLogo'
-import { AddButton, Button, DangerButton, Input, MoneyInput } from '../components/ui'
+import { AddButton, DangerButton, Input, MoneyInput } from '../components/ui'
 import { Currency } from '../components/Currency'
 import { catColors, cn, sum, totals, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
@@ -27,15 +26,10 @@ function BudgetSection({section,items}:{section:typeof sections[number];items:It
 
 function BudgetItemEditor({section,item}:{section:typeof sections[number];item:Item}){
  const mutate=useFinancas(s=>s.mutate)
- const [reminderOpen,setReminderOpen]=useState(false)
- const [reminderDate,setReminderDate]=useState(item.lembrete?.data??new Date().toISOString().slice(0,10))
- const [reminderNote,setReminderNote]=useState(item.lembrete?.observacao??'')
  const update=(change:(target:Item)=>void)=>mutate(d=>{const target=d.tabela[section.key].find(entry=>entry.id===item.id);if(target)change(target)})
  return <div className="border-b border-border/60 px-[14px] py-3">
   {section.key!=='assinaturas'&&<label className="block min-w-0"><span className="mb-1 block text-[8px] font-bold uppercase tracking-[.7px] text-t3">Nome</span><input aria-label={`Nome de ${item.label||'item'}`} value={item.label} onChange={event=>update(target=>{target.label=event.target.value})} className="h-9 w-full rounded-[11px] border border-border bg-surface px-3 text-xs font-semibold text-t1 outline-none transition focus:border-accent"/></label>}
-  <div className={cn('flex items-end gap-2',section.key!=='assinaturas'&&'mt-2')}><label className="min-w-0 flex-1"><span className="mb-1 block text-[8px] font-bold uppercase tracking-[.7px] text-t3">Valor mensal</span><MoneyInput aria-label={`Valor de ${item.label||'item'}`} value={item.valor} onValueChange={value=>update(target=>{target.valor=value})} className="h-9 rounded-[11px] bg-surface px-2.5 text-xs font-bold" inputClassName="text-right" style={{color:section.color}}/></label><button aria-label={item.lembrete?'Editar lembrete':'Adicionar lembrete'} title={item.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderOpen(value=>!value)} className={cn('glass-action glass-yellow grid h-9 w-9 shrink-0 place-items-center rounded-[11px] border transition active:scale-95',item.lembrete&&'ring-1 ring-yellow/20')}><Bell size={14}/></button><DangerButton className="h-9 w-9 rounded-[11px]" aria-label={`Excluir ${item.label||'item'}`} onClick={()=>mutate(d=>{d.tabela[section.key]=d.tabela[section.key].filter(x=>x.id!==item.id)})}/></div>
-  {item.lembrete&&<div className="mt-2 flex items-start gap-2 rounded-[11px] border border-yellow/20 bg-yellow/[.07] px-2.5 py-2 text-yellow"><Bell size={13} className="mt-0.5 shrink-0"/><div className="min-w-0"><p className="text-[9px] font-bold">Lembrar em {new Date(`${item.lembrete.data}T12:00:00`).toLocaleDateString('pt-BR')}</p>{item.lembrete.observacao&&<p className="mt-0.5 truncate text-[8px] text-t2">{item.lembrete.observacao}</p>}</div></div>}
-  {reminderOpen&&<div className="mt-2 rounded-[13px] border border-yellow/20 bg-surface p-3"><div className="mb-2 flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-[9px] bg-yellow/10 text-yellow"><Bell size={13}/></span><div><p className="text-[10px] font-bold text-t1">Lembrete</p><p className="text-[8px] text-t3">Defina quando deseja lembrar.</p></div></div><AurvmDatePicker value={reminderDate} onChange={setReminderDate} accentColor="var(--yellow)" className="h-9 w-full justify-between bg-el/50 px-3"/><Input aria-label="Observação do lembrete" placeholder="Observação opcional" value={reminderNote} onChange={event=>setReminderNote(event.target.value)} className="mt-2 h-9 bg-el/50 text-xs"/><div className="mt-2 flex items-center justify-end gap-2">{item.lembrete&&<DangerButton aria-label="Remover lembrete" title="Remover lembrete" onClick={()=>{update(target=>{target.lembrete=null});setReminderOpen(false)}}/>}<button onClick={()=>setReminderOpen(false)} className="h-8 rounded-[10px] px-2.5 text-[9px] font-semibold text-t2">Cancelar</button><Button disabled={!reminderDate} onClick={()=>{update(target=>{target.lembrete={data:reminderDate,observacao:reminderNote.trim()}});setReminderOpen(false)}} className="h-8 rounded-[10px] bg-yellow px-3 text-[9px]">Salvar</Button></div></div>}
+  <div className={cn('flex items-end gap-2',section.key!=='assinaturas'&&'mt-2')}><label className="min-w-0 flex-1"><span className="mb-1 block text-[8px] font-bold uppercase tracking-[.7px] text-t3">Valor mensal</span><MoneyInput aria-label={`Valor de ${item.label||'item'}`} value={item.valor} onValueChange={value=>update(target=>{target.valor=value})} className="h-9 rounded-[11px] bg-surface px-2.5 text-xs font-bold" inputClassName="text-right" style={{color:section.color}}/></label><DangerButton className="h-9 w-9 rounded-[11px]" aria-label={`Excluir ${item.label||'item'}`} onClick={()=>mutate(d=>{d.tabela[section.key]=d.tabela[section.key].filter(x=>x.id!==item.id)})}/></div>
  </div>
 }
 

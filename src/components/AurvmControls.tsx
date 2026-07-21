@@ -72,7 +72,7 @@ const weekdays=['S','T','Q','Q','S','S','D']
 const shiftedDateISO=(amount:number)=>{const date=new Date();date.setDate(date.getDate()+amount);return dateISO(date)}
 const fifthBusinessDayISO=(view:Date)=>{let count=0;for(let day=1;day<=31;day++){const date=new Date(view.getFullYear(),view.getMonth(),day);if(date.getMonth()!==view.getMonth())break;if(date.getDay()!==0){count++;if(count===5)return dateISO(date)}}return dateISO(view)}
 
-export function AurvmDatePicker({value,onChange,ariaLabel='Data',className,accentColor='var(--flux-orange)'}:{value:string;onChange:(value:string)=>void;ariaLabel?:string;className?:string;accentColor?:string}){
+export function AurvmDatePicker({value,onChange,ariaLabel='Data',className,accentColor='var(--flux-orange)',compact=false}:{value:string;onChange:(value:string)=>void;ariaLabel?:string;className?:string;accentColor?:string;compact?:boolean}){
   const initial=dateParts(value||dateISO(new Date()))
   const [open,setOpen]=useState(false)
   const [view,setView]=useState(()=>new Date(initial.year,initial.month-1,1))
@@ -83,11 +83,13 @@ export function AurvmDatePicker({value,onChange,ariaLabel='Data',className,accen
     const mondayIndex=(first.getDay()+6)%7
     return Array.from({length:42},(_,index)=>new Date(view.getFullYear(),view.getMonth(),index-mondayIndex+1))
   },[view])
-  const today=dateISO(new Date())
+  const todayDate=new Date();const today=dateISO(todayDate)
   const fifthDate=fifthBusinessDayISO(view)
-  const quickDates=[{label:'Hoje',value:shiftedDateISO(0)},{label:'Ontem',value:shiftedDateISO(-1)},{label:'Anteontem',value:shiftedDateISO(-2)},{label:'5º útil',value:fifthDate,fifth:true}]
+  const isCurrentView=view.getFullYear()===todayDate.getFullYear()&&view.getMonth()===todayDate.getMonth()
+  const quickFifthDate=isCurrentView&&fifthDate<today?fifthBusinessDayISO(new Date(view.getFullYear(),view.getMonth()+1,1)):fifthDate
+  const quickDates=[{label:'Hoje',value:shiftedDateISO(0)},{label:'Ontem',value:shiftedDateISO(-1)},{label:'Anteontem',value:shiftedDateISO(-2)},{label:'5º útil',value:quickFifthDate,fifth:true}]
   return <div className="relative">
-    <button type="button" aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open} onClick={()=>setOpen(state=>!state)} className={cn('inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-el/45 px-3 text-[11px] font-bold text-t1 transition active:scale-[.98]',className)}><span className="number">{dateLabel(value)}</span><IconCalendar size={14} style={{color:accentColor}}/></button>
+    <button type="button" aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open} onClick={()=>setOpen(state=>!state)} className={cn(compact?'inline-flex h-6 items-center gap-1 rounded-md border border-border bg-el/45 px-1.5 text-[9px] font-semibold text-t1 transition active:scale-[.98]':'inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-el/45 px-3 text-[11px] font-bold text-t1 transition active:scale-[.98]',className)}><span className="number">{dateLabel(value)}</span><IconCalendar size={compact?11:14} style={{color:accentColor}}/></button>
     {open&&createPortal(<>
       <button type="button" aria-label="Fechar calendário" onClick={event=>{event.stopPropagation();setOpen(false)}} className="aurvm-sheet-backdrop fixed inset-0 z-[60] cursor-default bg-black/45 backdrop-blur-[1px]"/>
       <div role="dialog" aria-label="Calendário" onClick={event=>event.stopPropagation()} className="aurvm-sheet safe-bottom fixed bottom-0 left-1/2 z-[70] w-[min(390px,100vw)] -translate-x-1/2 rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-4 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]">

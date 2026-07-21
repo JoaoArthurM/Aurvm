@@ -21,7 +21,7 @@ function SvgCurrency({value,suffix}:{value:number;suffix?:string}){const hidden=
 
 export function Dashboard(){
  const data=useFinancas(s=>s.data);const t=totals(data)
- return <div className="pb-4">
+ return <div>
   <Greeting/>
   <HeroCard saldo={t.saldo} entradas={t.entradas} gastos={t.gastos} fontes={data.tabela.entradas.length}/>
   <DonutCard fixos={t.fixos} variaveis={t.variaveis} assinaturas={t.assinaturas} economia={data.perfil.economia_mensal} saldo={t.saldo}/>
@@ -128,7 +128,7 @@ function Subscriptions(){
   const colors=['#8B5CF6','#F43F5E','#10B981','#3B82F6']
   const summaries=[['Total/mês',total],['Trimestral',total*3],['Anual',total*12]] as const
 
-  return <section className="card-glow mx-4 mb-3 rounded-[22px] border border-border bg-surface p-3">
+  return <section className="card-glow mx-4 rounded-[22px] border border-border bg-surface p-3">
     <div className="flex items-start justify-between px-1 pb-3 pt-1">
       <div><p className="flex items-center text-[10px] font-bold uppercase tracking-[1px] text-t3"><i className="mark-diamond"/>Assinaturas</p><p className="mt-0.5 text-[11px] text-t3">Distribuição dos serviços ativos</p></div>
       <span className="rounded-full bg-el px-2.5 py-1 font-mono text-[9px] font-bold text-t2">{items.length} ativas</span>
