@@ -7,18 +7,12 @@ import {
 } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { AurvmSelect } from '../components/AurvmControls'
-import { Button, Card, Toggle } from '../components/ui'
+import { Button, Card, ConfirmDialog, Input, Toggle } from '../components/ui'
 import { cn } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 import { defaultNavigation, navigationLabels } from '../lib/navigation'
 import type { FinancasData, Tab } from '../lib/types'
-import { exportBackupFile } from '../services/local-backup'
-
-const isFinancasBackup=(value:unknown):value is FinancasData=>{
-  if(!value||typeof value!=='object')return false
-  const data=value as Partial<FinancasData>
-  return data.version===1&&Boolean(data.perfil)&&Boolean(data.config)&&Array.isArray(data.economias)&&Boolean(data.tabela)&&['entradas','fixos','variaveis','assinaturas'].every(key=>Array.isArray(data.tabela?.[key as keyof FinancasData['tabela']]))&&Array.isArray(data.emprestimos?.pessoas)&&Array.isArray(data.flux?.lancamentos)&&Array.isArray(data.flux?.tags)
-}
+import { exportBackupFile, isFinancasData } from '../services/local-backup'
 
 const startScreenMeta:Record<Tab,{caption:string;icon:ReactNode;color:string}>={
   inicio:{caption:'Resumo e visão geral',icon:<IconHome size={15}/>,color:'var(--accent)'},
@@ -33,6 +27,7 @@ export function Config(){
   const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,syncNow,logout}=useFinancas()
   const [error,setError]=useState('')
   const [backupStatus,setBackupStatus]=useState<{type:'success'|'error';text:string}|null>(null)
+  const [pendingImport,setPendingImport]=useState<FinancasData|null>(null)
   const [dragging,setDragging]=useState<Tab|null>(null)
   const backupInputRef=useRef<HTMLInputElement>(null)
   const dragRef=useRef<{id:Tab;startY:number;index:number}|null>(null)
@@ -50,13 +45,14 @@ export function Config(){
   const importBackup=async(event:ChangeEvent<HTMLInputElement>)=>{
     const file=event.target.files?.[0];event.target.value='';if(!file)return
     try{
+      if(file.size>5*1024*1024)throw new Error('Arquivo muito grande')
       const parsed=JSON.parse(await file.text()) as unknown
       const candidate=parsed&&typeof parsed==='object'&&'data' in parsed?(parsed as {data:unknown}).data:parsed
-      if(!isFinancasBackup(candidate))throw new Error('Formato inválido')
-      replaceData(structuredClone(candidate))
-      setBackupStatus({type:'success',text:'Backup importado. Todos os dados foram restaurados.'})
+      if(!isFinancasData(candidate))throw new Error('Formato inválido')
+      setPendingImport(structuredClone(candidate))
     }catch{setBackupStatus({type:'error',text:'Arquivo inválido. Escolha um backup JSON gerado pelo Aurvm.'})}
   }
+  const applyImport=()=>{if(!pendingImport)return;replaceData(pendingImport);setPendingImport(null);setBackupStatus({type:'success',text:'Backup importado. Todos os dados foram restaurados.'})}
   const synchronizeNow=async()=>{
     if(!connected||busy)return
     setError('')
@@ -102,7 +98,7 @@ export function Config(){
     setDragging(null)
   }
 
-  return <div className="page min-h-full font-sans">
+  return <><div className="page min-h-full font-sans">
     <PageHeader eyebrow="Preferências" title="Configurações" subtitle="Deixe o Aurvm com a sua cara."/>
 
     <div className="space-y-5 px-4">
@@ -188,7 +184,7 @@ export function Config(){
 
       <Button onClick={logout} className="h-12 w-full border border-red bg-surface text-red shadow-[0_10px_28px_rgba(55,35,20,.045)]"><IconLogout size={16}/>Sair da conta</Button>
     </div>
-  </div>
+  </div>{pendingImport&&<ConfirmDialog title="Restaurar este backup?" message="A restauração substituirá todos os dados atuais deste aparelho. Exporte um backup atual antes de continuar, se precisar preservá-los." confirmLabel="Restaurar backup" onConfirm={applyImport} onCancel={()=>setPendingImport(null)}/>}</>
 }
 
 function ConfigSection({icon,title,children}:{icon:ReactNode;title:string;children:ReactNode}){

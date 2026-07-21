@@ -5,7 +5,7 @@ import {
   IconEye, IconEyeOff, IconPigMoney, IconPlus as Plus, IconReceiptDollar, IconRepeat, IconSearch as Search,
   IconSortAscendingLetters, IconSortDescendingNumbers, IconStarFilled, IconTag, IconTrash, IconX as X,
 } from '@tabler/icons-react'
-import { AddButton, Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
+import { AddButton, Button, Card, ConfirmDialog, DangerButton, Input, MoneyInput } from '../components/ui'
 import { AurvmDatePicker, AurvmSelect } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
 import { cn, fluxMeta, getLimites, money, monthKey, ocorreEm, ocorreNoMes, quintoDiaUtil, recurrenceOccurrenceIndex, saldoStyle, tempTiers, uid } from '../lib/utils'
@@ -60,10 +60,13 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
  const [openCell,setOpenCell]=useState<{month:'current'|'next';day:number}|null>(null)
  const setFilter=(value:SaldoFilter)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_filtro=value})
  const toggleDailyPlan=()=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_mostrar_planejamento_diario=!showDailyPlan})
- const [deleteId,setDeleteId]=useState<string|null>(null)
+  const [deleteId,setDeleteIdState]=useState<string|null>(null)
+  const [nextDeleteId,setNextDeleteId]=useState<string|null>(null)
  const [recurrenceDelete,setRecurrenceDelete]=useState<{id:string;date:string}|null>(null)
- const [cardDayEditor,setCardDayEditor]=useState<{monthKey:string;value:string}|null>(null)
- const currentKey=monthKey(month);const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();const today=new Date();today.setHours(0,0,0,0);const isCurrentMonth=currentKey===monthKey(today);const nowDay=isCurrentMonth?today.getDate():-1
+  const [cardDayEditor,setCardDayEditor]=useState<{monthKey:string;value:string}|null>(null)
+  const currentKey=monthKey(month);const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();const today=new Date();today.setHours(0,0,0,0);const isCurrentMonth=currentKey===monthKey(today);const nowDay=isCurrentMonth?today.getDate():-1
+  const setDeleteId=(value:string|null)=>{if(openCell?.month==='next')setNextDeleteId(value);else setDeleteIdState(value)}
+  const nextDeleteItem=nextDeleteId?data.flux.lancamentos.find(item=>item.id===nextDeleteId):null
  const todayRowRef=useRef<HTMLDivElement>(null)
  useEffect(()=>{if(nowDay<1)return;const frame=requestAnimationFrame(()=>todayRowRef.current?.scrollIntoView({block:'start',behavior:'smooth'}));return()=>cancelAnimationFrame(frame)},[currentKey,focusRequest,nowDay])
  const limites=getLimites(data.flux.temperatura)
@@ -92,7 +95,7 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
   return projected
  }
  const previousMonthEnd=new Date(month.getFullYear(),month.getMonth(),0)
- const monthOpeningBalance=dayNumber(previousMonthEnd)>=dayNumber(today)?projectFromToday(previousMonthEnd):(data.flux.saldo_inicial??0)
+ const monthOpeningBalance=dayNumber(previousMonthEnd)>=dayNumber(today)?projectFromToday(previousMonthEnd):balanceBeforeToday(previousMonthEnd)
  const plannedForDate=(date:Date)=>data.flux.valor_diario_planejado>0&&dayNumber(date)>dayNumber(today)?data.flux.valor_diario_planejado:0
  const plannedDaysInCurrentMonth=Array.from({length:days},(_,index)=>plannedForDate(new Date(month.getFullYear(),month.getMonth(),index+1))).filter(value=>value>0).length
  const currentMonthEndBalance=monthOpeningBalance+data.flux.lancamentos.filter(l=>ocorreNoMes(l,currentKey)).reduce((total,l)=>total+(l.tipo==='entrada'?l.valor:-l.valor),0)-plannedDaysInCurrentMonth*data.flux.valor_diario_planejado
@@ -115,7 +118,7 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
   const categoryTotals=(tx:typeof rows[number]['tx'],planned=0)=>{const visiblePlanned=showDailyPlan?planned:0;return (Object.keys(fluxMeta) as FluxTipo[]).map(type=>({type,value:tx.filter(item=>item.tipo===type).reduce((total,item)=>total+item.valor,0)+(type==='diario'?visiblePlanned:0)})).filter(item=>item.value!==0)}
  const isSunday=(d:Date,day:number)=>new Date(d.getFullYear(),d.getMonth(),day).getDay()===0
  const weekday=(d:Date,day:number)=>new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(new Date(d.getFullYear(),d.getMonth(),day)).replace('.','').slice(0,3)
- const deleteRecurring=(mode:'one'|'future'|'all')=>{
+  const deleteRecurring=(mode:'one'|'future'|'all')=>{
   const target=recurrenceDelete
   if(!target)return
   mutate(d=>{
@@ -129,7 +132,8 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
    item.repete.excluidas=item.repete.excluidas?.filter(date=>date<target.date)
   })
   setRecurrenceDelete(null)
- }
+  }
+  const deleteNextTransaction=()=>{if(!nextDeleteId)return;mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==nextDeleteId)});setNextDeleteId(null)}
  const cardMovementsInMonth=(period:string)=>data.flux.lancamentos.filter(item=>item.tipo==='cartao'&&ocorreNoMes(item,period))
  const hasCardDayAdjustment=(period:string)=>cardMovementsInMonth(period).some(item=>Boolean(item.cartao?.ajustes?.[period]))
  const updateCardDay=(period:string,value:string|null)=>{
@@ -150,7 +154,8 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
   setCardDayEditor(null)
  }
  const cols='grid-cols-[minmax(0,1fr)_46px_68px_46px_68px]'
- return <Card className="rounded-none border-x-0">
+  return <Card className="rounded-none border-x-0">
+   {nextDeleteItem&&<ConfirmDialog title={`Excluir ${nextDeleteItem.descricao}?`} message="Este lançamento do próximo mês será removido. Essa ação não pode ser desfeita." confirmLabel="Excluir lançamento" onConfirm={deleteNextTransaction} onCancel={()=>setNextDeleteId(null)}/>} 
   <div style={{background:'color-mix(in srgb, var(--el) 60%, var(--surface))'}} className={cn('sticky top-[38px] z-10 grid items-center border-b border-border py-2 text-[9px] font-bold uppercase tracking-wider text-t3',cols)}>
    <div className="relative ml-2 flex items-center gap-1">
     <button aria-label="Filtrar transações por tipo" aria-expanded={filterOpen} onClick={()=>setFilterOpen(v=>!v)} className="glass-action glass-neutral inline-flex h-7 items-center gap-1.5 rounded-full border pl-1.5 pr-2.5 text-[9px] font-bold uppercase tracking-wider transition active:scale-95">
@@ -368,8 +373,19 @@ function FluxMenu(){
  const {data,mutate}=useFinancas()
  const cartoes=data.flux.cartoes??[]
  const [addingCard,setAddingCard]=useState(false)
+ const [editingCard,setEditingCard]=useState<Cartao|null>(null)
+ const [cardToDelete,setCardToDelete]=useState<Cartao|null>(null)
+ const removeCard=()=>{
+  if(!cardToDelete)return
+  const id=cardToDelete.id
+  mutate(d=>{
+   d.flux.cartoes=(d.flux.cartoes??[]).filter(card=>card.id!==id)
+   d.flux.lancamentos.forEach(item=>{if(item.cartao_id===id)item.cartao_id=null})
+  })
+  setCardToDelete(null)
+ }
  return <div className="space-y-3">
-  <Card className="p-4"><p className="text-xs font-semibold">Saldo inicial do Flux</p><p className="mt-1 text-[9px] text-t3">Base exclusiva deste módulo · não altera a Tabela</p><MoneyInput aria-label="Saldo inicial do Flux" value={data.flux.saldo_inicial??0} onValueChange={value=>mutate(d=>{d.flux.saldo_inicial=value})} className="number mt-4 focus-within:border-flux"/></Card>
+  <Card className="p-4"><p className="text-xs font-semibold">Saldo inicial do Flux</p><p className="mt-1 text-[9px] text-t3">Base exclusiva deste módulo · não altera a Tabela</p><MoneyInput allowNegative aria-label="Saldo inicial do Flux" value={data.flux.saldo_inicial??0} onValueChange={value=>mutate(d=>{d.flux.saldo_inicial=value})} className="number mt-4 focus-within:border-flux"/></Card>
   <Card className="p-4"><p className="text-xs font-semibold">Planejamento diário</p><p className="mt-1 text-[9px] text-t3">Valor usado nas previsões futuras</p><MoneyInput value={data.flux.valor_diario_planejado} onValueChange={value=>mutate(d=>{d.flux.valor_diario_planejado=value})} className="number mt-4 focus-within:border-flux"/></Card>
   <Card className="p-4">
    <div className="flex items-center justify-between"><div><p className="text-xs font-semibold">Cartões</p><p className="mt-1 text-[9px] text-t3">Fechamento e vencimento das faturas</p></div>{!addingCard&&<AddButton onClick={()=>setAddingCard(true)}>Novo</AddButton>}</div>
@@ -404,7 +420,7 @@ function TemperaturaCard(){
      <span className="number grid h-8 w-10 shrink-0 place-items-center rounded-[8px] text-[10px] font-bold" style={{background:tier.bg,color:tier.fg}}>123</span>
      <span className="min-w-0 flex-1"><span className="block truncate text-[10px] font-semibold text-t1">{tier.label}</span><span className="block text-[8px] text-t3">{last?'acima de':'até'}</span></span>
      {editable
-      ?<MoneyInput aria-label={`Limite da faixa ${tier.label}`} value={limites[index]} onValueChange={value=>setLimite(index,value)} className="number h-8 w-28 rounded-[10px] border-border bg-surface px-2.5 text-xs"/>
+      ?<MoneyInput allowNegative aria-label={`Limite da faixa ${tier.label}`} value={limites[index]} onValueChange={value=>setLimite(index,value)} className="number h-8 w-28 rounded-[10px] border-border bg-surface px-2.5 text-xs"/>
       :<Currency value={limites[Math.min(index,limites.length-1)]} className="pr-2.5 text-xs font-bold text-t2"/>}
     </div>
    })}
@@ -412,9 +428,9 @@ function TemperaturaCard(){
  </Card>
 }
 
-function NewCard({close}:{close:()=>void}){
+function NewCard({close,card}:{close:()=>void;card?:Cartao}){
  const mutate=useFinancas(s=>s.mutate)
- const [nome,setNome]=useState('');const [fechamento,setFechamento]=useState(8);const [vencimento,setVencimento]=useState(15)
+ const [nome,setNome]=useState(card?.nome??'');const [fechamento,setFechamento]=useState(card?.fechamento??8);const [vencimento,setVencimento]=useState(card?.vencimento??15)
  const chip='inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[10px] font-semibold text-t2'
  const clampDay=(value:number)=>Math.min(31,Math.max(1,value||1))
  return <div className="mt-3 rounded-[14px] bg-el p-3">
@@ -436,15 +452,24 @@ function Horizon({close}:{close:()=>void}){
  const today=new Date();today.setHours(0,0,0,0)
  const dayNumber=(date:Date)=>Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())
  const movementOn=(date:Date)=>data.flux.lancamentos.filter(l=>ocorreEm(l,localISO(date))).reduce((total,l)=>total+(l.tipo==='entrada'?l.valor:-l.valor),0)
- let running=(data.flux.saldo_inicial??0)+movementOn(today)
+  const balanceAt=(date:Date)=>{
+   if(dayNumber(date)<dayNumber(today)){
+    let value=data.flux.saldo_inicial??0
+    const cursor=new Date(date);cursor.setDate(cursor.getDate()+1)
+    while(dayNumber(cursor)<dayNumber(today)){value-=movementOn(cursor);cursor.setDate(cursor.getDate()+1)}
+    return value
+   }
+   let value=(data.flux.saldo_inicial??0)+movementOn(today)
+   const cursor=new Date(today);cursor.setDate(cursor.getDate()+1)
+   while(dayNumber(cursor)<=dayNumber(date)){value+=movementOn(cursor)-data.flux.valor_diario_planejado;cursor.setDate(cursor.getDate()+1)}
+   return value
+  }
  const months=Array.from({length:6},(_,i)=>new Date(today.getFullYear(),today.getMonth()+i,1)).map(start=>{
   const total=new Date(start.getFullYear(),start.getMonth()+1,0).getDate()
   const dias=Array.from({length:total},(_,i)=>{
    const day=i+1
    const dt=new Date(start.getFullYear(),start.getMonth(),day)
-   if(dayNumber(dt)>dayNumber(today))running+=movementOn(dt)-data.flux.valor_diario_planejado
-   else if(dayNumber(dt)===dayNumber(today))running=movementOn(today)+(data.flux.saldo_inicial??0)
-   return{day,saldo:running,domingo:dt.getDay()===0,quinto:day===quintoDiaUtil(start),wd:new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(dt).replace('.','').slice(0,3)}
+    return{day,saldo:balanceAt(dt),domingo:dt.getDay()===0,quinto:day===quintoDiaUtil(start),wd:new Intl.DateTimeFormat('pt-BR',{weekday:'short'}).format(dt).replace('.','').slice(0,3)}
   })
   return{start,dias}
  })
@@ -481,7 +506,7 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
   const [installmentFocused,setInstallmentFocused]=useState(false)
   const [dateScopeOpen,setDateScopeOpen]=useState(false)
  const cartoes:Cartao[]=data.flux.cartoes??[]
- const [cartaoId,setCartaoId]=useState(cartoes[0]?.id??'')
+ const [cartaoId,setCartaoId]=useState(edit?.cartao_id??cartoes[0]?.id??'')
  const cartao=cartoes.find(c=>c.id===cartaoId)
  const color=type?fluxMeta[type].color:'var(--flux-orange)'
  const row='flex min-h-[56px] items-center gap-3 border-b border-border last:border-0'
@@ -493,12 +518,12 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
  const selectInstallments=(months:number)=>{setInstallmentDraft(String(months));setVezes(months);setInstallmentFocused(false)}
  const commitInstallments=()=>{const months=Math.min(120,Math.max(0,Number(installmentDraft)||0));setInstallmentDraft(months?String(months):'');setVezes(months);setInstallmentFocused(false)}
  const saveTransaction=(scope:'one'|'future'|null=null)=>{
-  if(!type||!desc||!value)return
+  if(!type||!desc||value<=0||(type==='cartao'&&!cartoes.length))return
   const selectedFormDate=occurrenceDate??edit?.data
   const recurrenceRule:'data'|'quinto_util'=repete&&frequencia==='mensal'&&(isFifthBusinessDay(date)||(edit?.repete?.regra==='quinto_util'&&date===selectedFormDate))?'quinto_util':'data'
   const nextRepete=repete?{vezes:vezes>0?vezes:null,frequencia,regra:recurrenceRule,...(edit?.repete?.excluidas?{excluidas:edit.repete.excluidas}: {})}:null
   mutate(d=>{
-   if(!edit){d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags,repete:nextRepete});return}
+   if(!edit){d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags,repete:nextRepete,cartao_id:type==='cartao'?(cartaoId||null):null});return}
    const current=d.flux.lancamentos.find(item=>item.id===edit.id)
    if(!current)return
    const selectedDate=occurrenceDate??current.data
@@ -508,21 +533,23 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
    const fields={tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags}
    if(scope==='one'&&recurrenceChanged&&current.repete){
     current.repete.excluidas=Array.from(new Set([...(current.repete.excluidas??[]),selectedDate]))
-    d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:null})
+     d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:null,cartao_id:type==='cartao'?(cartaoId||null):null})
     return
    }
    if(scope==='future'&&recurrenceChanged&&current.repete){
     const originalRepete=current.repete
     const index=occurrenceDate?recurrenceOccurrenceIndex(current,occurrenceDate):0
-    if(index<=0){current.data=date;Object.assign(current,fields);current.repete=nextRepete;return}
+    if(index<=0){current.data=date;Object.assign(current,fields);current.repete=nextRepete;if(type==='cartao')current.cartao_id=cartaoId||null;else delete current.cartao_id;return}
     current.repete={...originalRepete,vezes:originalRepete.vezes==null?index:Math.min(originalRepete.vezes,index),excluidas:originalRepete.excluidas?.filter(item=>item<selectedDate)}
     const remaining=originalRepete.vezes==null?null:Math.max(1,originalRepete.vezes-index)
-    d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:repete?{vezes:remaining,regra:recurrenceRule}:null})
+     d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:repete?{vezes:remaining,regra:recurrenceRule}:null,cartao_id:type==='cartao'?(cartaoId||null):null})
     return
    }
    current.data=occurrenceDate&&occurrenceDate!==current.data?current.data:date
    Object.assign(current,fields)
    current.repete=nextRepete
+   if(type==='cartao')current.cartao_id=cartaoId||null
+   else delete current.cartao_id
   })
   close()
  }
@@ -578,7 +605,8 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
      </>}
      <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconTag size={15}/></span><AurvmSelect ariaLabel="Tags" multiple values={tags} onValuesChange={setTags} placeholder="Sem tag" searchable searchPlaceholder="Buscar tag" className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={[{value:'',label:'Sem tag',caption:'não categorizar',icon:<IconTag size={13}/>,color:'var(--t3)'},...data.flux.tags.filter(t=>!t.oculta).map(item=>({value:item.id,label:item.label,caption:'tag de movimentação',icon:<IconTag size={13}/>,color:item.cor}))]}/></div>
     </div>
-     <button disabled={!desc||!value} onClick={submit} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>{edit?'salvar alterações':`adicionar ${typeSingular[type]}`}</button>
+     {type==='cartao'&&cartoes.length===0&&<p className="mt-3 rounded-[12px] border border-red/20 bg-red/[.06] px-3 py-2 text-[9px] text-red">Cadastre um cartão na aba Menu antes de adicionar uma movimentação de cartão.</p>}
+     <button disabled={!desc||value<=0||(type==='cartao'&&!cartoes.length)} onClick={submit} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>{edit?'salvar alterações':`adicionar ${typeSingular[type]}`}</button>
     <button onClick={close} className="mt-2 h-10 w-full text-sm font-bold text-t2 transition active:scale-95">cancelar</button>
    {dateScopeOpen&&<div className="fixed inset-0 z-[80] flex items-end bg-black/70" onClick={()=>setDateScopeOpen(false)}>
     <div onClick={event=>event.stopPropagation()} className="safe-bottom w-full rounded-t-[26px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.2)]">

@@ -19,7 +19,7 @@ export const seedData: FinancasData = {
     moeda: 'BRL',
     lembrete_mensal: true,
     tela_inicial: 'inicio',
-    preferencias: { valores_ocultos: false, dashboard_assinaturas: 'grid', flux_aba: 'saldos', flux_filtro: 'total', flux_tags_ordenacao: 'valor' },
+    preferencias: { valores_ocultos: false, dashboard_assinaturas: 'grid', flux_aba: 'saldos', flux_filtro: 'total', flux_tags_ordenacao: 'valor', economia_ordenacao: 'valor' },
     navegacao: [
       { id:'inicio', visivel:true }, { id:'tabela', visivel:true }, { id:'economia', visivel:true },
       { id:'emprestimos', visivel:true }, { id:'flux', visivel:true }, { id:'config', visivel:true },

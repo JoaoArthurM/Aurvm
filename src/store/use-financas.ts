@@ -3,6 +3,7 @@ import { seedData } from '../lib/seed'
 import type { FinancasData, Tab } from '../lib/types'
 import { driveService } from '../services/drive'
 import { loadDeviceBackup, loadLocalBackup, persistLocalBackup } from '../services/local-backup'
+import { syncReminders } from '../services/reminders'
 
 type SyncStatus = 'local' | 'syncing' | 'synced' | 'error'
 type Store = {
@@ -91,6 +92,7 @@ export const useFinancas = create<Store>((set, get) => {
     latestSavedAt=Date.now()
     editRevision++
     persistLocalBackup(data,latestSavedAt)
+    void syncReminders(data)
     set({lastBackupAt:latestSavedAt})
     scheduleSync(0)
   }
@@ -98,6 +100,7 @@ export const useFinancas = create<Store>((set, get) => {
     const data=normalizeData(record.data)
     latestSavedAt=record.updatedAt
     persistLocalBackup(data,record.updatedAt)
+    void syncReminders(data)
     set({data,tab:data.config.tela_inicial??'inicio',valuesHidden:data.config.preferencias?.valores_ocultos??false,lastBackupAt:record.updatedAt})
   }
   const reconcileRemote=async()=>{

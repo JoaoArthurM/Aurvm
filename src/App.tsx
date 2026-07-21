@@ -27,19 +27,20 @@ export default function App() {
   const restore = useFinancas(s => s.restore)
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#0C0C10':'#F7F4F1')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#0e1a28':'#f4f7fa')
     syncSystemBars(theme)
   }, [theme])
   useEffect(() => { void restore() }, [restore])
-  const loginVisible = !signedIn
+  const loginRequired = import.meta.env.VITE_REQUIRE_GOOGLE_LOGIN === 'true'
+  const loginVisible = loginRequired && !signedIn
   const preferences = navigation ?? defaultNavigation
   const visibleNav = preferences.map(item=>nav.find(entry=>entry.id===item.id)).filter((item):item is (typeof nav)[number]=>Boolean(item)).filter(item=>item.id!=='config'&&preferences.find(pref=>pref.id===item.id)?.visivel!==false)
   const pages: Record<Tab, JSX.Element> = { inicio: <Dashboard />, tabela: <Tabela />, economia: <EconomiaPage />, emprestimos: <Emprestimos />, flux: <Flux />, config: loginVisible ? <Login /> : <Config /> }
   return <main className={cn('app-shell relative mx-auto h-[100dvh] w-full max-w-[390px] overflow-hidden bg-bg',loginVisible&&'login-shell')}>
     <div className={cn('app-scroll w-full overflow-x-hidden overflow-y-auto',tab==='flux'&&'flux-scroll')}>{pages[tab]}</div>
     {!loginVisible&&<nav className="bottom-nav absolute z-40 flex px-2 pt-[9px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
-      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className="relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] border border-transparent py-1 text-[9px] font-semibold text-t3 transition duration-200 active:scale-95">
-        <Icon size={18} strokeWidth={2} className={cn('transition-colors',tab===id&&(id==='flux'?'text-flux':'text-accent'))}/><span>{label}</span>
+      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[14px] border py-1 text-[9px] font-semibold transition duration-200 active:scale-95', tab===id?cn('border-border/40 bg-surface shadow-[0_1px_5px_rgba(15,37,64,.09)]',id==='flux'?'text-flux':'text-accent'):'border-transparent text-t3')}>
+        <Icon size={18} strokeWidth={2}/><span>{label}</span>
       </button>)}
     </nav>}
   </main>

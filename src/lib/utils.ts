@@ -10,7 +10,8 @@ export const money = (value: number) => moneyFormatter.format(Number.isFinite(va
 export const shortBrl = brl
 export const uid = () => crypto.randomUUID()
 export const sum = (values: { valor: number }[]) => values.reduce((acc, item) => acc + Number(item.valor || 0), 0)
-export const monthKey = (date: Date) => date.toISOString().slice(0, 7)
+export const localISO = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+export const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 export const addMonths = (date: Date, count: number) => new Date(date.getFullYear(), date.getMonth() + count, 1)
 export const monthLabel = (key: string, long = false) => {
   const [year, month] = key.split('-').map(Number)
@@ -110,11 +111,11 @@ export const ocorreNoMes = (l: FluxLancamento, key: string) => {
 }
 
 export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: string }> = {
-  entrada: { label: 'Entradas', icon: '↙', color: '#2E9E5B' },
-  saida: { label: 'Saídas', icon: '↗', color: '#E14D4D' },
-  diario: { label: 'Diários', icon: 'D', color: '#E8618C' },
-  economia: { label: 'Economia', icon: 'E', color: '#2E9E5B' },
-  cartao: { label: 'Cartão', icon: 'C', color: '#8A78B5' },
+  entrada: { label: 'Entradas', icon: '↙', color: 'oklch(0.66 0.10 165)' },
+  saida: { label: 'Saídas', icon: '↗', color: 'oklch(0.64 0.12 30)' },
+  diario: { label: 'Diários', icon: 'D', color: 'oklch(0.65 0.11 305)' },
+  economia: { label: 'Economia', icon: 'E', color: 'oklch(0.73 0.09 195)' },
+  cartao: { label: 'Cartão', icon: 'C', color: 'oklch(0.58 0.10 280)' },
 }
 
 // Escala de temperatura da planilha de saldos — 7 faixas com as cores da planilha do usuário (Google Sheets).
@@ -134,5 +135,4 @@ export const getLimites = (t?: { limites?: number[] }): TemperaturaLimites => Ar
 export const saldoTier = (value: number, limites: TemperaturaLimites = defaultLimites) => { if (value <= limites[0]) return 0; let tier = 1; for (let i = 1; i < limites.length; i++) if (value >= limites[i]) tier = i + 1; return tier }
 export const saldoStyle = (value: number, limites?: TemperaturaLimites) => { const tier = tempTiers[saldoTier(value, limites)]; return { background: tier.bg, color: tier.fg } }
 
-// Paleta única das categorias de orçamento — aquecida para conviver com o laranja da marca (que é exclusivo de ações/navegação).
-export const catColors = { entradas: '#2E9E5B', fixos: '#E14D4D', variaveis: '#EDA30D', assinaturas: '#8A78B5', economia: '#2E9E5B' } as const
+export const catColors = { entradas: 'oklch(0.66 0.10 165)', fixos: 'oklch(0.60 0.10 250)', variaveis: 'oklch(0.78 0.10 78)', assinaturas: 'oklch(0.65 0.11 305)', economia: 'oklch(0.73 0.09 195)' } as const

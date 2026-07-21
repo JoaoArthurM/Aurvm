@@ -16,7 +16,7 @@ export default {
         accent: token('--accent'), green: token('--green'), yellow: token('--yellow'), red: token('--red'),
         'red-light': token('--red-light'), t1: token('--t1'), t2: token('--t2'), t3: token('--t3'), flux: token('--flux-orange'),
       },
-      boxShadow: { glow: '0 0 34px rgba(255,106,26,.22)' },
+      boxShadow: { glow: '0 0 34px rgba(63,108,143,.22)' },
       fontFamily: {
         sans: ['Archivo', 'ui-sans-serif', 'system-ui'],
         display: ['Space Grotesk', 'Archivo', 'ui-sans-serif', 'system-ui'],

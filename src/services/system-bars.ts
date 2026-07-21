@@ -10,7 +10,7 @@ export function syncSystemBars(theme:'light'|'dark'){
   if(!Capacitor.isNativePlatform())return
   const light=theme==='light'
   void SystemBars.setAppearance({
-    color:light?'#F7F4F1':'#0C0C10',
+    color:light?'#f4f7fa':'#0e1a28',
     light,
   }).catch(()=>undefined)
 }

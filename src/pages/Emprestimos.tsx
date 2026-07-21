@@ -1,38 +1,29 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   IconBell as Bell,
   IconCheck as Check,
   IconChevronDown as ChevronDown,
+  IconChevronLeft,
+  IconSortAscendingLetters,
+  IconSortDescendingNumbers,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
 import { AurvmDatePicker } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
-import { PageHeader } from '../components/PageHeader'
-import { AddButton, Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
+import { Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
 import { SunriseHero } from '../components/SunriseHero'
 import type { LancamentoPessoa, Pessoa } from '../lib/types'
 import { cn, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 
 const paidGreen = '#238A5B'
-const personPalette = ['#8B5CF6','#10B981','#F59E0B','#3B82F6','#E84D55','#EC4899','#06B6D4','#84CC16']
-const uniquePersonColors = (people: Pessoa[]) => {
-  const used = new Set<string>()
-  return people.map((person,index) => {
-    const current = person.cor?.toLowerCase()
-    const color = current && !used.has(current) ? person.cor : personPalette.find(candidate => !used.has(candidate.toLowerCase())) ?? `hsl(${(index * 137.5) % 360} 70% 50%)`
-    used.add(color.toLowerCase())
-    return color
-  })
-}
-const nextPersonColor = (people: Pessoa[]) => {
-  const used = new Set(people.map(person => person.cor?.toLowerCase()))
-  return personPalette.find(color => !used.has(color.toLowerCase())) ?? `hsl(${(people.length * 137.5) % 360} 70% 50%)`
-}
+const loanColor = 'oklch(0.60 0.12 5)'
+const uniquePersonColors = (people: Pessoa[]) => people.map(() => loanColor)
+const nextPersonColor = (_people: Pessoa[]) => loanColor
 
 export function Emprestimos() {
-  const { data, mutate } = useFinancas()
+  const { data, mutate, setTab } = useFinancas()
   const personColors = uniquePersonColors(data.emprestimos.pessoas)
   const people = data.emprestimos.pessoas.map((person,index) => ({ ...person, cor: personColors[index] }))
   useEffect(() => {
@@ -42,17 +33,32 @@ export function Emprestimos() {
   }, [data.emprestimos.pessoas, mutate, personColors])
   const [active, setActive] = useState(data.emprestimos.pessoas[0]?.id ?? '')
   const [adding, setAdding] = useState(false)
+  const [personOrder, setPersonOrder] = useState<'valor'|'nome'>('valor')
   const [personToDelete, setPersonToDelete] = useState<Pessoa|null>(null)
   const [loanToDelete, setLoanToDelete] = useState<{ person: Pessoa; loan: LancamentoPessoa }|null>(null)
   const allLoans = data.emprestimos.pessoas.flatMap((person) => person.lancamentos)
   const pending = allLoans.filter((loan) => !loan.pago)
   const received = allLoans.filter((loan) => loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
   const total = pending.reduce((sum, loan) => sum + loan.valor, 0)
+  const activePerson = people.find(person => person.id === active)
+  const sortedPeople = [...people].sort((a, b) => {
+    if (personOrder === 'nome') return a.nome.localeCompare(b.nome, 'pt-BR')
+    const aTotal = a.lancamentos.filter(loan => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
+    const bTotal = b.lancamentos.filter(loan => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
+    return bTotal - aTotal || a.nome.localeCompare(b.nome, 'pt-BR')
+  })
 
   return (
-    <div className="page">
-      <PageHeader eyebrow="Contas a receber" title="Empréstimos" subtitle="toque no nome para ver os detalhes" />
-      <SunriseHero
+    <div className="pb-4">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center px-[22px] pb-[14px] pt-0.5">
+        <button type="button" aria-label="Voltar para o início" onClick={() => setTab('inicio')} className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-surface text-t2 shadow-[0_2px_8px_rgba(15,37,64,.07)]"><IconChevronLeft size={20}/></button>
+        <div className="text-center"><p className="font-mono text-[9.5px] font-bold uppercase tracking-[2px]" style={{color:loanColor}}>Contas a receber</p><h1 className="mt-1 font-display text-[16px] font-bold leading-none tracking-[-.35px] text-t1">Empr&#233;stimos</h1></div>
+        <div className="flex h-9 items-center justify-self-end rounded-xl bg-el p-[3px]"><button type="button" aria-label="Ordenar por maior valor" onClick={() => setPersonOrder('valor')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'valor' ? 'bg-surface text-accent shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')}><IconSortDescendingNumbers size={15}/></button><button type="button" aria-label="Ordenar por nome" onClick={() => setPersonOrder('nome')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'nome' ? 'bg-surface text-accent shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')}><IconSortAscendingLetters size={15}/></button></div>
+      </header>
+      <div className="overflow-hidden px-5">
+      <section className="rounded-[24px] px-[22px] pb-[22px] pt-5" style={{background:'linear-gradient(150deg,#3a1f38 0%,#8f3f6c 52%,#c98fb0 112%)'}}><p className="font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85">⇄ Total a receber</p><Currency value={total} className="mt-3 text-[40px] font-black leading-none tracking-[-2px]" symbolClassName="opacity-55" style={{color:'#fff'}}/><p className="mt-2 text-[11px] text-white/85">{people.length} pessoas · {pending.length} lançamentos pendentes</p></section>
+      <div className="mt-3 grid grid-cols-3 gap-2.5"><LoanKpi label="Pessoas" value={String(people.length)} color="#12233c"/><LoanKpi label="Pendentes" value={String(pending.length)} color={loanColor}/><LoanKpi label="Recebido" value={<Currency value={received} symbolClassName="opacity-100" style={{color:paidGreen}}/>} color={paidGreen}/></div>
+      {false && <SunriseHero
         label="Total a receber"
         value={<Currency value={total} />}
         caption={<>{data.emprestimos.pessoas.length} pessoas <span>·</span> {pending.length} lançamentos pendentes</>}
@@ -61,10 +67,10 @@ export function Emprestimos() {
           { label: 'Pendentes', value: String(pending.length), sub: 'a receber', className: 'text-red' },
           { label: 'Recebido', value: <Currency value={received} />, sub: 'já pago', className: 'text-green' },
         ]}
-      />
-      <div className="space-y-[10px] px-4">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {people.map((person) => {
+      />}
+      <div className="mt-4 space-y-[14px] px-0 pb-[30px]">
+        <div className="grid grid-cols-3 gap-2.5">
+          {sortedPeople.map((person) => {
             const amount = person.lancamentos.filter((loan) => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
             const selected = active === person.id
 
@@ -72,7 +78,7 @@ export function Emprestimos() {
               <button
                 key={person.id}
                 onClick={() => setActive(person.id)}
-                className="min-w-[126px] shrink-0 rounded-[16px] border px-3 py-3 text-left transition active:scale-[.98]"
+                className="min-w-0 rounded-[16px] border px-3 py-3 text-left shadow-[0_2px_9px_rgba(15,37,64,.04)] transition active:scale-[.98]"
                 style={{
                   borderColor: selected ? person.cor : 'var(--border)',
                   background: selected
@@ -84,14 +90,14 @@ export function Emprestimos() {
                 }}
               >
                 <span
-                  className="mb-2 grid h-8 w-8 place-items-center rounded-full text-xs font-black text-white"
+                  className="mb-2 grid h-9 w-9 place-items-center rounded-full text-xs font-black text-white"
                   style={{ background: person.cor }}
                 >
                   {person.nome[0]}
                 </span>
                 <b className="block truncate text-xs">{person.nome}</b>
-                <Currency value={amount} className="mt-1 block text-sm font-black leading-none" style={{ color: person.cor }} />
-                <small className="mt-1.5 block text-[9px] text-t3">
+                <Currency value={amount} className="mt-1 block text-[12px] font-black leading-none" symbolClassName="opacity-100" style={{ color: person.cor }} />
+                <small className="hidden">
                   {person.lancamentos.length} {person.lancamentos.length === 1 ? 'lançamento' : 'lançamentos'}
                 </small>
               </button>
@@ -101,7 +107,7 @@ export function Emprestimos() {
 
         <section>
           <div className="space-y-[10px]">
-            {people.map((person) => <PersonCard key={person.id} person={person} onRequestDelete={()=>setPersonToDelete(person)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person, loan })} />)}
+            {activePerson&&<PersonCard key={activePerson.id} person={activePerson} onRequestDelete={()=>setPersonToDelete(activePerson)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person:activePerson, loan })} />}
           </div>
         </section>
 
@@ -113,12 +119,14 @@ export function Emprestimos() {
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && event.currentTarget.value.trim()) {
                   const name = event.currentTarget.value.trim()
+                  const id = uid()
                   mutate((draft) => draft.emprestimos.pessoas.push({
-                    id: uid(),
+                    id,
                     nome: name,
                     cor: nextPersonColor(draft.emprestimos.pessoas),
                     lancamentos: [],
                   }))
+                  setActive(id)
                   setAdding(false)
                 }
               }}
@@ -127,7 +135,7 @@ export function Emprestimos() {
           </Card>
         ) : (
           <div className="flex justify-end">
-            <AddButton onClick={() => setAdding(true)}>Nova pessoa</AddButton>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:loanColor,background:`color-mix(in oklch,${loanColor} 12%,transparent)`}}>+ Nova pessoa</button>
           </div>
         )}
         {personToDelete&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setPersonToDelete(null)}>
@@ -147,13 +155,18 @@ export function Emprestimos() {
           </div>
         </div>}
       </div>
+      </div>
     </div>
   )
 }
 
+function LoanKpi({ label, value, color }: { label: string; value: ReactNode; color: string }) {
+  return <div className="min-w-0 rounded-[16px] bg-surface p-[13px] shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="truncate font-mono text-[8.5px] font-medium uppercase tracking-[.8px] text-t3">{label}</p><div className="mt-[7px] truncate text-[16px] font-bold" style={{color}}>{value}</div></div>
+}
+
 function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pessoa;onRequestDelete:()=>void;onRequestDeleteLoan:(loan:LancamentoPessoa)=>void }) {
   const mutate = useFinancas((state) => state.mutate)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [adding, setAdding] = useState(false)
   const [reminderLoanId,setReminderLoanId]=useState<string|null>(null)
   const [loanView,setLoanView]=useState<'pending'|'paid'>('pending')
@@ -165,7 +178,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
   const personTotal = person.lancamentos.reduce((sum, loan) => sum + loan.valor, 0) || 1
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden rounded-[20px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
       <div className="flex items-center">
         <button onClick={() => setOpen((value) => !value)} className="flex min-w-0 flex-1 items-center py-4 pl-4 pr-2 text-left">
           <span
@@ -185,7 +198,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
           </div>
         </button>
         {open&&<DangerButton
-          className="mr-1"
+          className="mr-1 h-10 w-10 rounded-[11px]"
           aria-label={`Excluir ${person.nome}`}
           onClick={onRequestDelete}
         />}
@@ -211,11 +224,11 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
             return (
               <article
                 key={loan.id}
-                className={cn('mt-2.5 rounded-[14px] border border-border bg-el/35 p-3', loan.pago && 'opacity-55')}
+                className={cn('mt-2.5 rounded-[14px] border border-border bg-surface p-3 shadow-[0_2px_9px_rgba(15,37,64,.04)]', loan.pago && 'opacity-55')}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className={cn('truncate text-xs font-semibold', loan.pago && 'line-through')}>{loan.motivo}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('truncate text-[13px] font-bold text-t1', loan.pago && 'line-through')}>{loan.motivo}</p>
                     <AurvmDatePicker
                       value={loan.data}
                       onChange={(date) => mutate((draft) => {
@@ -227,10 +240,10 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                       ariaLabel={`Editar data de ${loan.motivo}`}
                       accentColor={person.cor}
                       compact
-                      className="mt-0.5 h-6 border-0 bg-transparent px-0 text-[9px] font-medium text-t3"
+                      className="mt-1 h-6 border-0 bg-transparent px-0 text-[10px] font-medium text-t3"
                     />
                   </div>
-                  <Currency value={loan.valor} className="shrink-0 text-sm font-black" style={{ color: person.cor }} />
+                  <Currency value={loan.valor} className="shrink-0 text-[15px] font-black" symbolClassName="opacity-55" style={{ color: person.cor }} />
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-[9px]">
@@ -247,7 +260,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                 {loan.lembrete&&<div className="mt-3 flex items-start gap-2 rounded-[11px] border border-yellow/20 bg-yellow/[.07] px-2.5 py-2 text-yellow"><Bell size={13} className="mt-0.5 shrink-0"/><div className="min-w-0"><p className="text-[9px] font-bold">Lembrar em {new Date(`${loan.lembrete.data}T12:00:00`).toLocaleDateString('pt-BR')}</p>{loan.lembrete.observacao&&<p className="mt-0.5 truncate text-[8px] text-t2">{loan.lembrete.observacao}</p>}</div></div>}
 
                 <div className="mt-3 flex justify-end gap-2">
-                  <button aria-label={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} title={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderLoanId(current=>current===loan.id?null:loan.id)} className={cn('glass-action glass-yellow grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border transition active:scale-95',loan.lembrete&&'ring-1 ring-yellow/20')}><Bell size={14}/></button>
+                  <button aria-label={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} title={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderLoanId(current=>current===loan.id?null:loan.id)} className={cn('glass-action glass-yellow grid h-10 w-10 shrink-0 place-items-center rounded-[11px] border transition active:scale-95',loan.lembrete&&'ring-1 ring-yellow/20')}><Bell size={14}/></button>
                   <button
                     onClick={() => mutate((draft) => {
                       const current = draft.emprestimos.pessoas
@@ -255,13 +268,14 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                         .find((item) => item.id === loan.id)
                       if (current) current.pago = !current.pago
                     })}
-                    className="glass-action inline-flex h-8 items-center gap-1.5 rounded-[10px] border px-2.5 text-[9px] font-semibold transition active:scale-95"
+                    className="glass-action inline-flex h-10 items-center gap-1.5 rounded-[11px] border px-3 text-[10px] font-semibold transition active:scale-95"
                     style={{ '--glass-color': paidGreen } as CSSProperties}
                   >
                     <Check size={12} strokeWidth={2.2} />
                     {loan.pago ? 'Reabrir' : 'Marcar como pago'}
                   </button>
-                  <DangerButton
+                    <DangerButton
+                     className="h-10 w-10 rounded-[11px]"
                     aria-label={`Excluir ${loan.motivo}`}
                     onClick={() => onRequestDeleteLoan(loan)}
                   />
@@ -275,7 +289,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
             <NewLoan personId={person.id} done={() => {setAdding(false);setLoanView('pending')}} />
           ) : (
             <div className="mt-3 flex items-center justify-end">
-              <AddButton onClick={() => setAdding(true)}>Adicionar lançamento</AddButton>
+              <button type="button" onClick={() => setAdding(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:loanColor,background:`color-mix(in oklch,${loanColor} 12%,transparent)`}}>+ Adicionar lançamento</button>
             </div>
           )}
         </div>
@@ -303,10 +317,10 @@ function NewLoan({ personId, done }: { personId: string; done: () => void }) {
   const [valor, setValor] = useState(0)
 
   return (
-    <div className="mt-3 rounded-xl bg-el p-3">
-      <div className="flex gap-2">
-        <Input placeholder="Motivo" value={motivo} onChange={(event) => setMotivo(event.target.value)} className="h-9" />
-        <MoneyInput aria-label="Valor" value={valor} onValueChange={setValor} className="number h-9 w-28" />
+    <div className="mt-3 rounded-[14px] border border-border bg-surface p-3">
+      <div className="grid grid-cols-[1.25fr_1fr] gap-2">
+        <div className="min-w-0"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Motivo</span><Input aria-label="Motivo do lançamento" placeholder="Ex.: parcela, serviço..." value={motivo} onChange={(event) => setMotivo(event.target.value)} className="h-10 rounded-[11px] bg-bg px-3 text-xs font-semibold" /></div>
+        <div className="min-w-0"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Valor</span><MoneyInput aria-label="Valor do lançamento" value={valor} onValueChange={setValor} className="h-10 rounded-[11px] bg-bg px-2.5 text-xs font-bold" inputClassName="text-right" style={{color:loanColor}} /></div>
       </div>
       <Button
         disabled={!motivo || !valor}
@@ -320,7 +334,8 @@ function NewLoan({ personId, done }: { personId: string; done: () => void }) {
           }))
           done()
         }}
-        className="mt-2 h-8 w-full"
+        className="mt-3 h-10 w-full rounded-[11px] text-[11px] font-bold"
+        style={{background:loanColor}}
       >
         Salvar
       </Button>

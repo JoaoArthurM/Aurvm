@@ -12,10 +12,25 @@ const HISTORY_LIMIT=20
 let deviceWriteChain=Promise.resolve()
 const browserStorage=()=>typeof window==='undefined'?null:window.localStorage
 
+const isRecord=(value:unknown):value is Record<string,unknown>=>Boolean(value&&typeof value==='object'&&!Array.isArray(value))
+const isFiniteNumber=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
+const isDateKey=(value:unknown)=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)
+const isReminder=(value:unknown)=>value==null||(isRecord(value)&&isDateKey(value.data)&&typeof value.observacao==='string')
+const isItem=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&(value.emoji==null||typeof value.emoji==='string')&&isReminder(value.lembrete)
+const isEconomia=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&['recorrente','parcelado','pontual'].includes(String(value.tipo))&&(value.vezes==null||Number.isInteger(value.vezes))&&(value.mes==null||typeof value.mes==='string')&&(value.frequencia==null||['mensal','semanal','diaria','nenhuma'].includes(String(value.frequencia)))
+const isTag=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&typeof value.cor==='string'&&(value.oculta==null||typeof value.oculta==='boolean')
+const isPersonLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&typeof value.motivo==='string'&&isFiniteNumber(value.valor)&&typeof value.pago==='boolean'&&isReminder(value.lembrete)
+const isPerson=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.nome==='string'&&typeof value.cor==='string'&&Array.isArray(value.lancamentos)&&value.lancamentos.every(isPersonLoan)
+const isCard=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.nome==='string'&&Number.isInteger(value.fechamento)&&value.fechamento>=1&&value.fechamento<=31&&Number.isInteger(value.vencimento)&&value.vencimento>=1&&value.vencimento<=31
+const isRecurrence=(value:unknown)=>value==null||(isRecord(value)&&(value.vezes==null||Number.isInteger(value.vezes))&&(value.excluidas==null||Array.isArray(value.excluidas)&&value.excluidas.every(isDateKey))&&(value.frequencia==null||['mensal','semanal','diaria'].includes(String(value.frequencia)))&&(value.regra==null||['data','quinto_util'].includes(String(value.regra))))
+const isFluxLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&['entrada','saida','diario','economia','cartao'].includes(String(value.tipo))&&isFiniteNumber(value.valor)&&typeof value.descricao==='string'&&(value.tag_id==null||typeof value.tag_id==='string')&&(value.tag_ids==null||Array.isArray(value.tag_ids)&&value.tag_ids.every(item=>typeof item==='string'))&&isRecurrence(value.repete)&&(value.cartao_id==null||typeof value.cartao_id==='string')&&(value.cartao==null||isRecord(value.cartao)&&(value.cartao.ajustes==null||isRecord(value.cartao.ajustes)&&Object.values(value.cartao.ajustes).every(isDateKey)))
+
 export const isFinancasData=(value:unknown):value is FinancasData=>{
-  if(!value||typeof value!=='object')return false
-  const data=value as Partial<FinancasData>
-  return data.version===1&&Boolean(data.perfil)&&Boolean(data.config)&&Array.isArray(data.economias)&&Boolean(data.tabela)&&Boolean(data.emprestimos)&&Boolean(data.flux)
+  if(!isRecord(value)||value.version!==1||!isRecord(value.perfil)||!isFiniteNumber(value.perfil.saldo_inicial)||!isFiniteNumber(value.perfil.economia_mensal)||!isFiniteNumber(value.perfil.valor_diario)||!isRecord(value.tabela)||!isRecord(value.emprestimos)||!isRecord(value.flux)||!isRecord(value.config))return false
+  const tabela=value.tabela
+  const config=value.config
+  const flux=value.flux
+  return ['entradas','fixos','variaveis','assinaturas'].every(key=>Array.isArray(tabela[key])&&tabela[key].every(isItem))&&Array.isArray(value.economias)&&value.economias.every(isEconomia)&&Array.isArray(value.emprestimos.pessoas)&&value.emprestimos.pessoas.every(isPerson)&&isFiniteNumber(flux.valor_diario_planejado)&&Array.isArray(flux.tags)&&flux.tags.every(isTag)&&Array.isArray(flux.lancamentos)&&flux.lancamentos.every(isFluxLoan)&&(flux.saldo_inicial==null||isFiniteNumber(flux.saldo_inicial))&&(flux.cartoes==null||Array.isArray(flux.cartoes)&&flux.cartoes.every(isCard))&&(config.tema==='light'||config.tema==='dark')&&config.moeda==='BRL'&&typeof config.lembrete_mensal==='boolean'&&(config.tela_inicial==null||['inicio','tabela','economia','emprestimos','flux','config'].includes(String(config.tela_inicial)))&&(config.navegacao==null||Array.isArray(config.navegacao)&&config.navegacao.every(item=>isRecord(item)&&['inicio','tabela','economia','emprestimos','flux','config'].includes(String(item.id))&&typeof item.visivel==='boolean'))
 }
 
 const parseRecord=(raw:string|null):BackupRecord|null=>{
