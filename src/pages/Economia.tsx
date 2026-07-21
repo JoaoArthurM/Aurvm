@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconRepeat, IconSortAscendingLetters, IconSortDescendingNumbers, IconStarFilled } from '@tabler/icons-react'
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconPigMoney, IconRepeat, IconSortAscendingLetters, IconSortDescendingNumbers, IconStarFilled } from '@tabler/icons-react'
 import { Currency } from '../components/Currency'
 import { Card, ConfirmDialog, DangerButton, MoneyInput, Pill } from '../components/ui'
 import { AurvmMonthPicker, AurvmSelect } from '../components/AurvmControls'
@@ -52,7 +52,7 @@ export function EconomiaPage() {
 function EconomyHero({forecast,initial,monthly,extras}:{forecast:number;initial:number;monthly:number;extras:number}){
   return <section className="mb-0">
     <div className="rounded-[24px] px-[22px] pb-[22px] pt-5" style={{background:'linear-gradient(150deg,#173a44 0%,#2d7d84 55%,#8fc9c6 112%)'}}>
-      <p className="font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85">◈ Reserva em 12 meses</p>
+      <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85"><IconPigMoney size={12} strokeWidth={2.4}/>Reserva em 12 meses</p>
       <Currency value={forecast} className="mt-3 text-[40px] font-black leading-none tracking-[-2px] text-white" symbolClassName="text-white opacity-55" amountClassName="text-white"/>
       <p className="mt-2 text-[11px] text-white">saldo inicial + economia mensal + extras</p>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconChevronLeft, IconChevronRight as ChevronRight, IconSortAscendingLetters, IconSortDescendingNumbers } from '@tabler/icons-react'
+import { IconChevronLeft, IconChevronRight as ChevronRight, IconReportMoney, IconSortAscendingLetters, IconSortDescendingNumbers } from '@tabler/icons-react'
 import { SubscriptionEditor, SubscriptionLogo } from '../components/SubscriptionLogo'
 import { ConfirmDialog, DangerButton, Input, MoneyInput } from '../components/ui'
 import { Currency } from '../components/Currency'
@@ -43,7 +43,7 @@ export function Tabela(){
 function PlanningHero({saldo,entradas,gastos,economia}:{saldo:number;entradas:number;gastos:number;economia:number}){
  return <section className="mb-0">
   <div className="rounded-[24px] px-[22px] pb-[22px] pt-5" style={{background:'linear-gradient(155deg,#1b2f4a 0%,#3f6c8f 55%,#8fb5c9 108%)'}}>
-   <p className="font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/80">Resultado mensal</p>
+   <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/80"><IconReportMoney size={12} strokeWidth={2.4}/>Resultado mensal</p>
    <div className="number mt-3 text-[38px] font-black leading-none tracking-[-1.8px] text-white"><Currency value={saldo} symbolClassName="opacity-55" amountClassName="text-white"/></div>
    <p className="mt-2 text-[11px] text-white">entradas − gastos − economia</p>
   </div>

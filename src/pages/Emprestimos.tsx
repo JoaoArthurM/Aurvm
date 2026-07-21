@@ -7,6 +7,7 @@ import {
   IconSortAscendingLetters,
   IconSortDescendingNumbers,
   IconTrash,
+  IconUserDollar,
   IconX,
 } from '@tabler/icons-react'
 import { AurvmDatePicker } from '../components/AurvmControls'
@@ -47,16 +48,29 @@ export function Emprestimos() {
     const bTotal = b.lancamentos.filter(loan => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
     return bTotal - aTotal || a.nome.localeCompare(b.nome, 'pt-BR')
   })
+  const addPerson = (rawName: string) => {
+    const name = rawName.trim()
+    if (!name) return
+    const id = uid()
+    mutate((draft) => draft.emprestimos.pessoas.push({
+      id,
+      nome: name,
+      cor: nextPersonColor(draft.emprestimos.pessoas),
+      lancamentos: [],
+    }))
+    setActive(id)
+    setAdding(false)
+  }
 
   return (
     <div className="pb-4">
       <header className="grid grid-cols-[1fr_auto_1fr] items-center px-[22px] pb-[14px] pt-0.5">
         <button type="button" aria-label="Voltar para o início" onClick={() => setTab('inicio')} className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-surface text-t2 shadow-[0_2px_8px_rgba(15,37,64,.07)]"><IconChevronLeft size={20}/></button>
         <div className="text-center"><p className="font-mono text-[9.5px] font-bold uppercase tracking-[2px]" style={{color:loanColor}}>Contas a receber</p><h1 className="mt-1 font-display text-[16px] font-bold leading-none tracking-[-.35px] text-t1">Empr&#233;stimos</h1></div>
-        <div className="flex h-9 items-center justify-self-end rounded-xl bg-el p-[3px]"><button type="button" aria-label="Ordenar por maior valor" onClick={() => setPersonOrder('valor')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'valor' ? 'bg-surface text-accent shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')}><IconSortDescendingNumbers size={15}/></button><button type="button" aria-label="Ordenar por nome" onClick={() => setPersonOrder('nome')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'nome' ? 'bg-surface text-accent shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')}><IconSortAscendingLetters size={15}/></button></div>
+        <div className="flex h-9 items-center justify-self-end rounded-xl bg-el p-[3px]"><button type="button" aria-label="Ordenar por maior valor" onClick={() => setPersonOrder('valor')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'valor' ? 'shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')} style={personOrder === 'valor' ? {color:loanColor,background:'var(--surface)'} : undefined}><IconSortDescendingNumbers size={15}/></button><button type="button" aria-label="Ordenar por nome" onClick={() => setPersonOrder('nome')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition', personOrder === 'nome' ? 'shadow-[0_2px_7px_rgba(15,37,64,.09)]' : 'text-t3')} style={personOrder === 'nome' ? {color:loanColor,background:'var(--surface)'} : undefined}><IconSortAscendingLetters size={15}/></button></div>
       </header>
       <div className="overflow-hidden px-5">
-      <section className="rounded-[24px] px-[22px] pb-[22px] pt-5" style={{background:'linear-gradient(150deg,#3a1f38 0%,#8f3f6c 52%,#c98fb0 112%)'}}><p className="font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85">⇄ Total a receber</p><Currency value={total} className="mt-3 text-[40px] font-black leading-none tracking-[-2px]" symbolClassName="opacity-55" style={{color:'#fff'}}/><p className="mt-2 text-[11px] text-white/85">{people.length} pessoas · {pending.length} lançamentos pendentes</p></section>
+      <section className="rounded-[24px] px-[22px] pb-[22px] pt-5" style={{background:'linear-gradient(150deg,#3a1f38 0%,#8f3f6c 52%,#c98fb0 112%)'}}><p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85"><IconUserDollar size={12} strokeWidth={2.4}/>Total a receber</p><Currency value={total} className="mt-3 text-[40px] font-black leading-none tracking-[-2px]" symbolClassName="opacity-55" style={{color:'#fff'}}/><p className="mt-2 text-[11px] text-white/85">{people.length} pessoas · {pending.length} lançamentos pendentes</p></section>
       <div className="mt-3 grid grid-cols-3 gap-2.5"><LoanKpi label="Pessoas" value={String(people.length)} color="#12233c"/><LoanKpi label="Pendentes" value={String(pending.length)} color={loanColor}/><LoanKpi label="Recebido" value={<Currency value={received} symbolClassName="opacity-100" style={{color:paidGreen}}/>} color={paidGreen}/></div>
       {false && <SunriseHero
         label="Total a receber"
@@ -116,20 +130,8 @@ export function Emprestimos() {
             <Input
               autoFocus
               placeholder="Nome da pessoa"
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && event.currentTarget.value.trim()) {
-                  const name = event.currentTarget.value.trim()
-                  const id = uid()
-                  mutate((draft) => draft.emprestimos.pessoas.push({
-                    id,
-                    nome: name,
-                    cor: nextPersonColor(draft.emprestimos.pessoas),
-                    lancamentos: [],
-                  }))
-                  setActive(id)
-                  setAdding(false)
-                }
-              }}
+              onBlur={(event) => addPerson(event.currentTarget.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') addPerson(event.currentTarget.value) }}
             />
             <p className="mt-2 text-[9px] text-t3">Pressione Enter para adicionar</p>
           </Card>
@@ -224,11 +226,12 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
             return (
               <article
                 key={loan.id}
-                className={cn('mt-2.5 rounded-[14px] border border-border bg-surface p-3 shadow-[0_2px_9px_rgba(15,37,64,.04)]', loan.pago && 'opacity-55')}
+                className={cn('mt-2.5 overflow-hidden rounded-[16px] border bg-surface shadow-[0_2px_9px_rgba(15,37,64,.04)]', loan.pago && 'opacity-55')}
+                style={{borderColor:`color-mix(in oklch,${person.cor} 24%,var(--border))`}}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 border-b border-border/60 px-3.5 pb-3 pt-3">
                   <div className="min-w-0 flex-1">
-                    <p className={cn('truncate text-[13px] font-bold text-t1', loan.pago && 'line-through')}>{loan.motivo}</p>
+                    <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{background:person.cor}}/><p className={cn('truncate text-[13px] font-bold text-t1', loan.pago && 'line-through')}>{loan.motivo}</p></div>
                     <AurvmDatePicker
                       value={loan.data}
                       onChange={(date) => mutate((draft) => {
@@ -243,44 +246,36 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                       className="mt-1 h-6 border-0 bg-transparent px-0 text-[10px] font-medium text-t3"
                     />
                   </div>
-                  <Currency value={loan.valor} className="shrink-0 text-[15px] font-black" symbolClassName="opacity-55" style={{ color: person.cor }} />
+                  <div className="shrink-0 text-right"><p className="font-mono text-[8px] font-bold uppercase tracking-[.7px] text-t3">Valor</p><Currency value={loan.valor} className="mt-0.5 block text-[16px] font-black" symbolClassName="opacity-55" style={{color:person.cor}} /></div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between text-[9px]">
-                  <span className="font-medium uppercase tracking-[.55px] text-t3">Participação no total</span>
-                  <strong style={{ color: person.cor }}>{percentageLabel}%</strong>
-                </div>
-                <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-el">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(percentage, 100)}%`, background: person.cor }}
-                  />
-                </div>
+                <div className="px-3.5 pb-3 pt-3">
+                  <div className="rounded-[12px] border border-border/70 bg-bg/70 px-3 py-2.5">
+                    <div className="flex items-center justify-between text-[9px]"><span className="font-mono font-bold uppercase tracking-[.55px] text-t3">Participação no total</span><strong style={{color:person.cor}}>{percentageLabel}%</strong></div>
+                    <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-el"><div className="h-full rounded-full transition-all" style={{width:`${Math.min(percentage,100)}%`,background:person.cor}}/></div>
+                  </div>
 
-                {loan.lembrete&&<div className="mt-3 flex items-start gap-2 rounded-[11px] border border-yellow/20 bg-yellow/[.07] px-2.5 py-2 text-yellow"><Bell size={13} className="mt-0.5 shrink-0"/><div className="min-w-0"><p className="text-[9px] font-bold">Lembrar em {new Date(`${loan.lembrete.data}T12:00:00`).toLocaleDateString('pt-BR')}</p>{loan.lembrete.observacao&&<p className="mt-0.5 truncate text-[8px] text-t2">{loan.lembrete.observacao}</p>}</div></div>}
+                  {loan.lembrete&&<div className="mt-2.5 flex items-center gap-2 rounded-[12px] border border-border bg-bg px-3 py-2.5 text-t2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] bg-el text-t3"><Bell size={13}/></span><div className="min-w-0"><p className="text-[9px] font-bold">Lembrar em {new Date(`${loan.lembrete.data}T12:00:00`).toLocaleDateString('pt-BR')}</p>{loan.lembrete.observacao&&<p className="mt-0.5 truncate text-[8px] text-t3">{loan.lembrete.observacao}</p>}</div></div>}
 
-                <div className="mt-3 flex justify-end gap-2">
-                  <button aria-label={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} title={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderLoanId(current=>current===loan.id?null:loan.id)} className={cn('glass-action glass-yellow grid h-10 w-10 shrink-0 place-items-center rounded-[11px] border transition active:scale-95',loan.lembrete&&'ring-1 ring-yellow/20')}><Bell size={14}/></button>
-                  <button
-                    onClick={() => mutate((draft) => {
-                      const current = draft.emprestimos.pessoas
-                        .find((item) => item.id === person.id)?.lancamentos
-                        .find((item) => item.id === loan.id)
-                      if (current) current.pago = !current.pago
-                    })}
-                    className="glass-action inline-flex h-10 items-center gap-1.5 rounded-[11px] border px-3 text-[10px] font-semibold transition active:scale-95"
-                    style={{ '--glass-color': paidGreen } as CSSProperties}
-                  >
-                    <Check size={12} strokeWidth={2.2} />
-                    {loan.pago ? 'Reabrir' : 'Marcar como pago'}
-                  </button>
-                    <DangerButton
-                     className="h-10 w-10 rounded-[11px]"
-                    aria-label={`Excluir ${loan.motivo}`}
-                    onClick={() => onRequestDeleteLoan(loan)}
-                  />
+                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-border/60 pt-3">
+                    <button aria-label={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} title={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderLoanId(current=>current===loan.id?null:loan.id)} className={cn('glass-action glass-neutral grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border transition active:scale-95',loan.lembrete&&'ring-1 ring-border')}><Bell size={14}/></button>
+                    <button
+                      onClick={() => mutate((draft) => {
+                        const current = draft.emprestimos.pessoas
+                          .find((item) => item.id === person.id)?.lancamentos
+                          .find((item) => item.id === loan.id)
+                        if (current) current.pago = !current.pago
+                      })}
+                      className="glass-action inline-flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[10px] font-semibold transition active:scale-95"
+                      style={{'--glass-color':paidGreen} as CSSProperties}
+                    >
+                      <Check size={12} strokeWidth={2.2}/>
+                      {loan.pago?'Reabrir':'Marcar como pago'}
+                    </button>
+                    <DangerButton className="h-9 w-9 rounded-[10px]" aria-label={`Excluir ${loan.motivo}`} onClick={() => onRequestDeleteLoan(loan)} />
+                  </div>
+                  {reminderLoanId===loan.id&&<LoanReminder personId={person.id} loan={loan} done={()=>setReminderLoanId(null)}/>} 
                 </div>
-                {reminderLoanId===loan.id&&<LoanReminder personId={person.id} loan={loan} done={()=>setReminderLoanId(null)}/>}
               </article>
             )
           })}
@@ -304,10 +299,10 @@ function LoanReminder({personId,loan,done}:{personId:string;loan:LancamentoPesso
   const [note,setNote]=useState(loan.lembrete?.observacao??'')
   const update=(reminder:LancamentoPessoa['lembrete'])=>mutate(draft=>{const current=draft.emprestimos.pessoas.find(person=>person.id===personId)?.lancamentos.find(item=>item.id===loan.id);if(current)current.lembrete=reminder})
   return <div className="mt-3 rounded-[13px] border border-yellow/20 bg-surface p-3 shadow-[0_6px_18px_rgba(70,40,24,.04)]">
-    <div className="mb-2 flex items-center gap-2 text-yellow"><span className="grid h-7 w-7 place-items-center rounded-[9px] bg-yellow/10"><Bell size={13}/></span><div><p className="text-[10px] font-bold text-t1">Lembrete de cobrança</p><p className="text-[8px] text-t3">Defina quando deseja lembrar.</p></div></div>
-    <AurvmDatePicker value={date} onChange={setDate} accentColor="var(--yellow)" className="h-9 w-full justify-between bg-el/50 px-3"/>
+    <div className="mb-2 flex items-center gap-2 text-t2"><span className="grid h-7 w-7 place-items-center rounded-[9px] bg-el"><Bell size={13}/></span><div><p className="text-[10px] font-bold text-t1">Lembrete de cobrança</p><p className="text-[8px] text-t3">Defina quando deseja lembrar.</p></div></div>
+    <AurvmDatePicker value={date} onChange={setDate} accentColor="var(--t2)" className="h-9 w-full justify-between bg-el/50 px-3"/>
     <Input aria-label="Observação do lembrete" placeholder="Observação opcional" value={note} onChange={event=>setNote(event.target.value)} className="mt-2 h-9 bg-el/50 text-xs"/>
-    <div className="mt-2 flex items-center justify-end gap-2">{loan.lembrete&&<DangerButton aria-label="Remover lembrete" title="Remover lembrete" onClick={()=>{update(null);done()}}/>}<button onClick={done} className="h-8 rounded-[10px] px-2.5 text-[9px] font-semibold text-t2 transition active:scale-95">Cancelar</button><Button disabled={!date} onClick={()=>{update({data:date,observacao:note.trim()});done()}} className="h-8 rounded-[10px] bg-yellow px-3 text-[9px]">Salvar lembrete</Button></div>
+    <div className="mt-2 flex items-center justify-end gap-2">{loan.lembrete&&<DangerButton aria-label="Remover lembrete" title="Remover lembrete" onClick={()=>{update(null);done()}}/>}<button onClick={done} className="h-8 rounded-[10px] px-2.5 text-[9px] font-semibold text-t2 transition active:scale-95">Cancelar</button><Button disabled={!date} onClick={()=>{update({data:date,observacao:note.trim()});done()}} className="h-8 rounded-[10px] bg-accent px-3 text-[9px]">Salvar lembrete</Button></div>
   </div>
 }
 

@@ -1,11 +1,10 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import {
-  IconBell, IconBellRinging, IconChevronRight, IconDownload, IconEyeCheck, IconGripVertical,
+  IconBell, IconBellRinging, IconChevronLeft, IconChevronRight, IconDownload, IconEyeCheck, IconGripVertical,
   IconEyeOff, IconHome, IconInfoCircle, IconLayoutNavbar, IconLogout, IconMoon, IconPalette,
   IconPigMoney, IconRefresh, IconReportMoney, IconShieldCheck, IconSun, IconTableColumn,
   IconUpload, IconUser, IconUserDollar,
 } from '@tabler/icons-react'
-import { PageHeader } from '../components/PageHeader'
 import { AurvmSelect } from '../components/AurvmControls'
 import { Button, Card, ConfirmDialog, Input, Toggle } from '../components/ui'
 import { cn } from '../lib/utils'
@@ -24,7 +23,7 @@ const startScreenMeta:Record<Tab,{caption:string;icon:ReactNode;color:string}>={
 }
 
 export function Config(){
-  const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,syncNow,logout}=useFinancas()
+  const {data,mutate,replaceData,connected,accountName,syncStatus,lastBackupAt,lastSyncAt,connect,disconnect,syncNow,logout,setTab}=useFinancas()
   const [error,setError]=useState('')
   const [backupStatus,setBackupStatus]=useState<{type:'success'|'error';text:string}|null>(null)
   const [pendingImport,setPendingImport]=useState<FinancasData|null>(null)
@@ -99,7 +98,11 @@ export function Config(){
   }
 
   return <><div className="page min-h-full font-sans">
-    <PageHeader eyebrow="Preferências" title="Configurações" subtitle="Deixe o Aurvm com a sua cara."/>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center px-[22px] pb-[14px] pt-0.5">
+      <button type="button" aria-label="Voltar para o início" onClick={()=>setTab('inicio')} className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-surface text-t2 shadow-[0_2px_8px_rgba(15,37,64,.07)]"><IconChevronLeft size={20}/></button>
+      <div className="text-center"><p className="font-mono text-[9.5px] font-bold uppercase tracking-[2px] text-accent">Preferências</p><h2 className="text-[16px] font-bold">Configurações</h2></div>
+      <div />
+    </div>
 
     <div className="space-y-5 px-4">
       <ConfigSection icon={<GoogleDriveMark className="h-4 w-[18px]"/>} title="Conta e dados">

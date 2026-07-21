@@ -74,7 +74,7 @@ button { -webkit-user-select: none; user-select: none; }
 .hero-eye-toggle:hover,
 [data-theme="dark"] .hero-eye-toggle:hover { background:rgba(255,255,255,.24); }
 .bottom-nav {
-  left:12px; right:12px; bottom:max(34px, env(safe-area-inset-bottom)); height:62px;
+  left:12px; right:12px; bottom:max(20px, env(safe-area-inset-bottom)); height:62px;
   border:1px solid var(--border); border-radius:22px;
   background:var(--el);
   box-shadow:0 8px 22px rgba(15,37,64,.12);
