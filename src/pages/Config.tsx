@@ -135,8 +135,9 @@ export function Config(){
             <button type="button" onClick={()=>backupInputRef.current?.click()} className="glass-action glass-accent flex min-w-0 items-center gap-2.5 rounded-[13px] border px-3 py-3 text-left transition active:scale-[.98]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-accent/10 text-accent"><IconUpload size={15}/></span><span className="min-w-0"><span className="block text-[10px] font-bold text-t1">Importar</span><span className="mt-0.5 block text-[8px] text-t3">Abrir JSON</span></span></button>
             <input ref={backupInputRef} type="file" accept="application/json,.json" onChange={importBackup} className="hidden"/>
           </div>
-          {backupStatus&&<p className={cn('border-t border-border px-4 py-3 text-[9px]',backupStatus.type==='success'?'text-green':'text-red')}>{backupStatus.text}</p>}
-        </Card>
+         {backupStatus&&<p className={cn('border-t border-border px-4 py-3 text-[9px]',backupStatus.type==='success'?'text-green':'text-red')}>{backupStatus.text}</p>}
+       </Card>
+       <Card className="mt-3 rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><label><span className="mb-1.5 block text-[9px] font-bold uppercase tracking-[.7px] text-t3">Seu nome</span><Input maxLength={60} value={data.perfil.nome??''} onChange={event=>mutate(draft=>{draft.perfil.nome=event.target.value})} placeholder="Como deseja ser chamado" className="h-11 bg-el/40"/></label></Card>
       </ConfigSection>
 
       <ConfigSection title="Aparência" color="#B88624">
@@ -175,7 +176,7 @@ export function Config(){
 
       <ConfigSection title="Notificações" color="#8A78B5">
         <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
-          <SettingRow icon={<IconBellRinging size={16}/>} label="Lembretes de cobranças e dívidas" caption={reminderCount?`${reminderCount} ${reminderCount===1?'lembrete cadastrado':'lembretes cadastrados'}`:'Nenhum lembrete cadastrado'}><Toggle checked={data.config.lembrete_mensal} onChange={()=>mutate(d=>{d.config.lembrete_mensal=!d.config.lembrete_mensal})}/></SettingRow>
+         <SettingRow icon={<IconBellRinging size={16}/>} label="Lembretes de cobranças e dívidas" caption={reminderCount?`${reminderCount} ${reminderCount===1?'lembrete cadastrado':'lembretes cadastrados'} · agendados no aparelho`:'Nenhum lembrete cadastrado'}><Toggle checked={data.config.lembrete_mensal} onChange={()=>mutate(d=>{d.config.lembrete_mensal=!d.config.lembrete_mensal})}/></SettingRow>
         </Card>
       </ConfigSection>
 

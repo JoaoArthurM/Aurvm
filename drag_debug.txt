@@ -1,0 +1,6 @@
+[2026-07-22T16:45:38.273Z] createFileStackDragIcon calling Resvg for count=1
+[2026-07-22T16:45:43.063Z] createFileStackDragIcon resvg result: isEmpty=false, size={"width":96,"height":96}
+[2026-07-22T16:45:43.095Z] createFileStackDragIcon calling Resvg for count=1
+[2026-07-22T16:45:45.081Z] createFileStackDragIcon resvg result: isEmpty=false, size={"width":96,"height":96}
+[2026-07-22T16:45:45.093Z] createFileStackDragIcon calling Resvg for count=1
+[2026-07-22T16:45:47.016Z] createFileStackDragIcon resvg result: isEmpty=false, size={"width":96,"height":96}

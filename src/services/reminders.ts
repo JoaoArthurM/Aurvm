@@ -21,7 +21,7 @@ export const syncReminders=async(data:FinancasData)=>{
     const permission=await LocalNotifications.checkPermissions()
     const granted=permission.display==='granted'?permission:await LocalNotifications.requestPermissions()
     if(granted.display!=='granted')return
-    await LocalNotifications.createChannel({id:CHANNEL_ID,name:'Lembretes do Aurvm',description:'Lembretes de cobranças e compromissos',importance:5})
+    if(Capacitor.getPlatform()==='android')await LocalNotifications.createChannel({id:CHANNEL_ID,name:'Lembretes do Aurvm',description:'Lembretes de cobranças e compromissos',importance:5})
     if(scheduledIds.length)await LocalNotifications.cancel({notifications:scheduledIds.map(id=>({id}))})
     scheduledIds=[]
     if(!data.config.lembrete_mensal)return

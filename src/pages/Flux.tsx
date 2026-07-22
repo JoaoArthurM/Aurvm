@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   IconCalendarStats as CalendarRange, IconCashBanknoteMinus, IconCashBanknotePlus,
-  IconAdjustmentsDollar, IconCalendar, IconCalendarMonth, IconCheck, IconChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCreditCard, IconPencil,
+  IconAdjustmentsDollar, IconCalendar, IconCalendarMonth, IconChartLine, IconCheck, IconChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCreditCard, IconPencil,
   IconEye, IconEyeOff, IconPigMoney, IconPlus as Plus, IconReceiptDollar, IconRepeat, IconSearch as Search,
   IconSortAscendingLetters, IconSortDescendingNumbers, IconStarFilled, IconTag, IconTrash, IconX as X,
 } from '@tabler/icons-react'
@@ -10,10 +10,27 @@ import { AurvmDatePicker, AurvmSelect } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
 import { cn, fluxMeta, getLimites, money, monthKey, ocorreEm, ocorreNoMes, quintoDiaUtil, recurrenceOccurrenceIndex, saldoStyle, tempTiers, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
-import type { Cartao, FluxLancamento, FluxTipo, RepeticaoFrequencia } from '../lib/types'
+import type { Cartao, FluxLancamento, FluxTipo, RepeticaoFrequencia, Tag } from '../lib/types'
 
 const fluxIcons = { entrada: IconCashBanknotePlus, saida: IconCashBanknoteMinus, diario: IconReceiptDollar, economia: IconPigMoney, cartao: IconCreditCard } as const
 function FluxTypeIcon({tipo,size=12}:{tipo:FluxTipo;size?:number}){const Icon=fluxIcons[tipo];return <Icon size={size} strokeWidth={2.4}/>}
+type MovementTag={id:string;label:string;cor:string}
+function MovementList({tx,date,period,filtered,tags,deleteId,onEdit,onRequestDelete,onCancelDelete,onConfirmDelete,extraAction}:{tx:FluxLancamento[];date:string;period:string;filtered:boolean;tags:MovementTag[];deleteId:string|null;onEdit:(item:FluxLancamento,date:string)=>void;onRequestDelete:(item:FluxLancamento,date:string)=>void;onCancelDelete:()=>void;onConfirmDelete:(id:string)=>void;extraAction?:ReactNode}){
+ const title=filtered?'Movimentações filtradas':'Todas as movimentações'
+ return <div className="border-t border-border/60 bg-el/35 px-3 py-3">
+  <div className="flex items-center gap-2.5 px-1">
+   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-surface text-flux shadow-[0_2px_7px_rgba(15,37,64,.06)]"><IconReceiptDollar size={17}/></span>
+   <div className="min-w-0 flex-1"><p className="text-[10px] font-extrabold uppercase tracking-[.8px] text-t1">{title}</p><p className="mt-0.5 text-[9px] text-t3">{period} · dia {date.slice(-2)}</p></div>
+   {extraAction}
+   <span className="number rounded-full bg-surface px-2 py-1 text-[9px] font-bold text-t2 shadow-[0_1px_5px_rgba(15,37,64,.05)]">{tx.length}</span>
+  </div>
+  {tx.length===0?<p className="mt-3 rounded-[14px] border border-dashed border-border bg-surface/70 px-3 py-3 text-[10px] text-t3">Nenhuma entrada ou saída neste dia.</p>:<div className="mt-3 grid gap-2">{tx.map(item=>{const txTagIds=item.tag_ids?.length?item.tag_ids:item.tag_id?[item.tag_id]:[];const txTags=txTagIds.map(id=>tags.find(tag=>tag.id===id)).filter((tag):tag is MovementTag=>Boolean(tag));return <div key={item.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(item,date)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(item,date)}}} className="grid min-h-[58px] cursor-pointer grid-cols-[32px_minmax(0,1fr)_auto_32px] items-center gap-2.5 rounded-[15px] border border-border/70 bg-surface px-3 py-2.5 shadow-[0_2px_8px_rgba(15,37,64,.035)] transition hover:border-border active:scale-[.995]">
+   <span className="grid h-8 w-8 place-items-center rounded-[10px] text-white shadow-sm" style={{background:fluxMeta[item.tipo].color}}><FluxTypeIcon tipo={item.tipo} size={14}/></span>
+   <span className="min-w-0"><span className="block truncate text-[11px] font-bold text-t1">{item.descricao}</span><span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-t3"><span className="inline-flex items-center gap-1 rounded-full bg-el/60 px-1.5 py-0.5 font-semibold">{item.repete&&<IconRepeat size={9} strokeWidth={2.6}/>} {typeSingular[item.tipo]}</span>{txTags.map(tag=><span key={tag.id} className="inline-flex items-center gap-[3px] rounded-full px-1.5 py-0.5 text-[8px] font-bold" style={{color:tag.cor,background:`${tag.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tag.label}</span>)}</span></span>
+   <Currency value={item.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[item.tipo].color}}/>
+   {deleteId===item.id?<span className="flex shrink-0 items-center gap-1"><button type="button" aria-label="Cancelar exclusão" onClick={onCancelDelete} className="grid h-8 w-8 place-items-center rounded-full border border-border bg-el/45 text-t3 transition active:scale-95"><X size={13}/></button><DangerButton className="h-8 w-8 rounded-[10px]" aria-label={`Confirmar exclusão de ${item.descricao}`} title={item.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>onConfirmDelete(item.id)}/></span>:<DangerButton className="h-8 w-8 rounded-[10px]" aria-label={`Excluir ${item.descricao}`} title={item.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>onRequestDelete(item,date)}/>}</div>})}</div>}
+ </div>
+}
 function DailyPlanNotice({value}:{value:number}){return <div className="mt-2 flex items-center justify-center gap-2.5 rounded-[12px] border border-dashed bg-surface px-2.5 py-2" style={{borderColor:`${fluxMeta.diario.color}55`}}><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><FluxTypeIcon tipo="diario" size={13}/></span><span className="min-w-0 text-center"><span className="block text-[11px] font-semibold text-t1">Previsão diária</span><span className="mt-0.5 block text-[9px] text-t3">planejamento automático</span></span><Currency value={value} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta.diario.color}}/></div>}
 const recurrenceSuggestions=[2,3,4,5,6,7,8,9,10,11,12]
 const recurrenceOptions=[
@@ -41,6 +58,25 @@ const localISO=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2
 const isFifthBusinessDay=(value:string)=>{const [year,month,day]=value.split('-').map(Number);return day===quintoDiaUtil(new Date(year,month-1,1))}
 
 type FluxTab='saldos'|'totais'|'tags'|'menu'
+function FluxTabs({tab,onChange}:{tab:FluxTab;onChange:(value:FluxTab)=>void}){
+ const anchorRef=useRef<HTMLDivElement>(null)
+ const [pinned,setPinned]=useState(false)
+ useEffect(()=>{
+  const anchor=anchorRef.current
+ const scroll=anchor?.closest('.app-scroll')
+ if(!anchor||!scroll)return
+  const update=()=>setPinned((scroll as HTMLElement).scrollTop>0||window.scrollY>0||anchor.getBoundingClientRect().top<=0)
+  update()
+  const observer=new IntersectionObserver(()=>update(),{root:scroll,threshold:[0]})
+  observer.observe(anchor)
+  scroll.addEventListener('scroll',update,{passive:true})
+  window.addEventListener('scroll',update,{passive:true,capture:true})
+  document.addEventListener('scroll',update,{passive:true,capture:true})
+  window.addEventListener('resize',update)
+  return()=>{observer.disconnect();scroll.removeEventListener('scroll',update);window.removeEventListener('scroll',update,true);document.removeEventListener('scroll',update,true);window.removeEventListener('resize',update)}
+ },[])
+ return <div ref={anchorRef} className="mx-5 mb-3 h-[48px]"><div className={cn('flux-tabs-sticky grid h-[48px] grid-cols-4 items-center gap-1 rounded-[12px] border border-border bg-el p-1 shadow-[0_5px_14px_rgba(15,37,64,.07)]',pinned&&'flux-tabs-sticky-pinned')}>{(['saldos','totais','tags','menu'] as FluxTab[]).map(x=><button type="button" onClick={()=>onChange(x)} key={x} className={cn('flex h-[38px] items-center justify-center rounded-[11px] border border-transparent text-[10px] font-semibold capitalize text-t3 transition active:scale-[.98]',tab===x&&'border-border/40 bg-surface text-flux shadow-[0_1px_5px_rgba(15,37,64,.08)]')}>{x}</button>)}</div></div>
+}
 export function Flux(){
  const {data,mutate,setTab:navigateTo}=useFinancas(); const [monthOffset,setMonthOffset]=useState(0); const tab=data.config.preferencias?.flux_aba??'saldos';const [horizon,setHorizon]=useState(false);const [adding,setAdding]=useState(false);const [editing,setEditing]=useState<{item:FluxLancamento;occurrenceDate:string}|null>(null);const [saldosFocusRequest,setSaldosFocusRequest]=useState(0)
  const setTab=(value:FluxTab)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_aba=value})
@@ -51,9 +87,9 @@ export function Flux(){
       <div className="text-center"><p className="font-mono text-[9.5px] font-bold uppercase tracking-[2px] text-flux">Fluxo diário</p><h1 className="mt-1 font-display text-[16px] font-bold leading-none tracking-[-.35px] text-t1">{label}</h1></div>
       <button type="button" aria-label="Nova movimentação" onClick={()=>{setEditing(null);setAdding(true)}} className="glass-action glass-accent grid h-9 w-9 place-items-center justify-self-end rounded-[12px] border transition active:scale-95"><Plus size={17} strokeWidth={2.4}/></button>
     </div>
-    <div className="mt-3 flex items-center justify-center gap-1.5"><button aria-label="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><ChevronLeft size={16} strokeWidth={2.2}/></button><button aria-label="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><ChevronRight size={16} strokeWidth={2.2}/></button><button aria-label="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[9px] font-bold transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={13}/>Hoje</button><button aria-label="Horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><IconCalendarMonth size={16}/></button></div>
+    <div className="mt-3 flex items-center justify-center gap-1.5"><button type="button" aria-label="Mês anterior" title="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral inline-flex h-8 w-[70px] items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[9px] font-bold leading-none transition active:scale-95"><ChevronLeft size={15} strokeWidth={2.2}/><span>Anterior</span></button><button type="button" aria-label="Próximo mês" title="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral inline-flex h-8 w-[70px] items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[9px] font-bold leading-none transition active:scale-95"><span>Próximo</span><ChevronRight size={15} strokeWidth={2.2}/></button><button type="button" aria-label="Ir para o mês atual" title="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-8 w-[54px] items-center justify-center gap-1 rounded-[11px] border px-1.5 text-[9px] font-bold leading-none transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={13}/>Hoje</button><button type="button" aria-label="Abrir horizonte de saldos" title="Abrir horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral inline-flex h-8 w-[78px] items-center justify-center gap-1 rounded-[11px] border px-1.5 text-[9px] font-bold leading-none transition active:scale-95"><IconCalendarMonth size={15}/><span>Horizonte</span></button></div>
   </header>
- <div className="flux-tabs-sticky sticky top-0 z-20 mx-5 grid h-[56px] grid-cols-4 items-center gap-1 rounded-[14px] border border-border bg-el p-1 shadow-[0_8px_18px_rgba(15,37,64,.08)]">{(['saldos','totais','tags','menu'] as FluxTab[]).map(x=><button type="button" onClick={()=>{setTab(x);if(x==='saldos')setSaldosFocusRequest(value=>value+1)}} key={x} className={cn('flex h-[46px] items-center justify-center rounded-[14px] border border-transparent text-[11px] font-semibold capitalize text-t3 transition active:scale-[.98]',tab===x&&'border-border/40 bg-surface text-flux shadow-[0_1px_5px_rgba(15,37,64,.09)]')}>{x}</button>)}</div>
+ <FluxTabs tab={tab} onChange={x=>{setTab(x);if(x==='saldos')setSaldosFocusRequest(value=>value+1)}}/>
   <div className={cn(tab!=='saldos'&&'px-5 pt-4')}>{tab==='saldos'&&<Saldos month={base} focusRequest={saldosFocusRequest} onEdit={(item,occurrenceDate)=>setEditing({item,occurrenceDate})}/>} {tab==='totais'&&<Totais monthKey={key}/>} {tab==='tags'&&<Tags monthKey={key}/>} {tab==='menu'&&<FluxMenu/>}</div>
   {horizon&&<Horizon close={()=>setHorizon(false)}/>} {(adding||editing)&&<NewTransaction edit={editing?.item??null} occurrenceDate={editing?.occurrenceDate} close={()=>{setAdding(false);setEditing(null)}}/>}</div>
 }
@@ -196,7 +232,7 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
     const valueColor=filter==='total'?(value>0?'var(--green)':'var(--red)'):fluxMeta[filter].color
     const nextExists=row.day<=nextDays
     const DayCell=({date,exists=true}:{date:Date;exists?:boolean})=>{const fifth=exists&&row.day===quintoDiaUtil(date);return <span aria-label={fifth?`${row.day}, quinto dia útil`:undefined} className={cn('number flex items-center justify-center border-l border-border/60 bg-el/40 text-[10px] font-bold',!exists&&'opacity-0',isSunday(date,row.day)?'text-red':'text-t2',row.day===nowDay&&'text-flux',fifth&&'bg-yellow/10')}><span className="inline-flex items-center gap-[2px]">{fifth&&<IconStarFilled size={7} className="shrink-0 text-yellow"/>}<span>{String(row.day).padStart(2,'0')}<span className="text-[8px] font-semibold opacity-70">/{weekday(date,row.day)}</span></span></span></span>}
-    const transactionDetails=(tx:typeof rows[number]['tx'],date:string,period:string)=><div className="border-t border-border/60 bg-el/40 px-3 py-2.5"><p className="text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">Movimentações de {period} · dia {date.slice(-2)}</p>{tx.length===0?<p className="mt-2 rounded-[12px] border border-dashed border-border bg-surface/60 px-3 py-3 text-[10px] text-t3">Nenhuma entrada ou saída neste dia.</p>:<div className="mt-2 space-y-1.5">{tx.map(item=>{const txTagIds=item.tag_ids?.length?item.tag_ids:item.tag_id?[item.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((tag):tag is NonNullable<typeof tag>=>Boolean(tag));return <div key={item.id} className="flex items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[item.tipo].color}}><FluxTypeIcon tipo={item.tipo} size={13}/></span><span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-t1">{item.descricao}</span><span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{item.repete&&<IconRepeat size={9} strokeWidth={2.6}/>} {typeSingular[item.tipo]}{txTags.map(tag=><span key={tag.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tag.cor,background:`${tag.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tag.label}</span>)}</span></span><Currency value={item.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[item.tipo].color}}/>{deleteId===item.id?<span className="flex shrink-0 items-center gap-1 rounded-full border border-red/20 bg-red/5 p-0.5"><button type="button" aria-label="Cancelar exclusão" onClick={()=>setDeleteId(null)} className="grid h-7 w-7 place-items-center rounded-full text-t3 transition active:scale-95"><X size={13}/></button><DangerButton aria-label={`Confirmar exclusão de ${item.descricao}`} title={item.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(entry=>entry.id!==item.id)});setDeleteId(null)}} className="h-7 w-7"/></span>:<DangerButton aria-label={`Excluir ${item.descricao}`} title={item.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>item.repete?setRecurrenceDelete({id:item.id,date}):setDeleteId(item.id)} className="h-7 w-7"/>}</div>})}</div>}</div>
+    const transactionDetails=(tx:typeof rows[number]['tx'],date:string,period:string)=><MovementList tx={tx} date={date} period={period} filtered={filter!=='total'} tags={data.flux.tags} deleteId={deleteId} onEdit={onEdit} onRequestDelete={(item,occurrenceDate)=>item.repete?setRecurrenceDelete({id:item.id,date:occurrenceDate}):setDeleteId(item.id)} onCancelDelete={()=>setDeleteId(null)} onConfirmDelete={id=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==id)});setDeleteId(null)}}/>
    return <div ref={row.day===nowDay?todayRowRef:undefined} key={row.date} className={cn('border-b border-border/60 last:border-0',row.day===nowDay&&'scroll-mt-[92px]')}>
      <div className={cn('grid min-h-[52px] w-full items-stretch',cols,row.day===nowDay&&'bg-flux/5')}>
       <button type="button" aria-label={`Ver movimentações de ${monthHead(month)}, dia ${row.day}`} aria-expanded={currentOpen} onClick={()=>setOpenCell(currentOpen?null:{month:'current',day:row.day})} className={cn('col-span-3 grid min-w-0 grid-cols-[minmax(0,1fr)_46px_68px] items-stretch text-left transition',currentOpen&&'bg-flux/10')}>
@@ -224,21 +260,21 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
        </button>
        :<span className="col-span-2 bg-el/30"/>}
      </div>
-     {currentOpen&&currentTx.length>0&&<div className="space-y-1.5 border-t border-border/60 bg-el/40 px-3 py-2.5"><div className="mb-1 flex items-center justify-between gap-2"><p className="min-w-0 text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">{filter==='total'?'Todas as movimentações':'Movimentações filtradas'} de {monthHead(month)} · dia {row.date.slice(-2)}</p>{currentTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:currentKey,value:row.date})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}</div>
-       {currentTx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(tx,row.date)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(tx,row.date)}}} className="flex cursor-pointer items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[tx.tipo].color}}><FluxTypeIcon tipo={tx.tipo} size={13}/></span>
+     {currentOpen&&currentTx.length>0&&<div className="space-y-2 border-t border-border/60 bg-el/25 px-3 py-3"><div className="mb-1 flex items-center justify-between gap-2"><p className="min-w-0 text-[10px] font-extrabold uppercase tracking-[.8px] text-t1">{filter==='total'?'Todas as movimentações':'Movimentações filtradas'} de {monthHead(month)} · dia {row.date.slice(-2)}</p>{currentTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:currentKey,value:row.date})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}</div>
+       {currentTx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(tx,row.date)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(tx,row.date)}}} className="flex cursor-pointer items-center gap-2.5 min-h-[58px] rounded-[15px] border border-border/70 bg-surface px-3 py-2.5 shadow-[0_2px_8px_rgba(15,37,64,.035)]">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-white" style={{background:fluxMeta[tx.tipo].color}}><FluxTypeIcon tipo={tx.tipo} size={13}/></span>
       <span className="min-w-0 flex-1">
-       <span className="block truncate text-[11px] font-semibold text-t1">{tx.descricao}</span>
-       <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{tx.repete&&<IconRepeat size={9} strokeWidth={2.6}/>}{typeSingular[tx.tipo]}{txTags.map(tg=><span key={tg.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tg.cor,background:`${tg.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tg.label}</span>)}</span>
+       <span className="block truncate text-[11px] font-bold text-t1">{tx.descricao}</span>
+       <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{tx.repete&&<IconRepeat size={9} strokeWidth={2.6}/>}{typeSingular[tx.tipo]}{txTags.map(tg=><span key={tg.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tg.cor,background:`${tg.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tg.label}</span>)}</span>
       </span>
       <Currency value={tx.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[tx.tipo].color}}/>
       {deleteId===tx.id
-       ?<span className="flex shrink-0 items-center gap-1 rounded-full border border-red/20 bg-red/5 p-0.5"><button type="button" aria-label="Cancelar exclusão" onClick={()=>setDeleteId(null)} className="grid h-7 w-7 place-items-center rounded-full text-t3 transition active:scale-95"><X size={13}/></button><DangerButton aria-label={`Confirmar exclusão de ${tx.descricao}`} title={tx.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==tx.id)});setDeleteId(null)}} className="h-7 w-7"/></span>
-       :<DangerButton aria-label={`Excluir ${tx.descricao}`} title={tx.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>tx.repete?setRecurrenceDelete({id:tx.id,date:row.date}):setDeleteId(tx.id)} className="h-7 w-7"/>}
+       ?<span className="flex shrink-0 items-center gap-1 rounded-full border border-red/20 bg-red/5 p-0.5"><button type="button" aria-label="Cancelar exclusão" onClick={()=>setDeleteId(null)} className="grid h-8 w-8 place-items-center rounded-full text-t3 transition active:scale-95"><X size={13}/></button><DangerButton className="h-8 w-8 rounded-[10px]" aria-label={`Confirmar exclusão de ${tx.descricao}`} title={tx.repete?'Excluir lançamento e recorrências':'Confirmar exclusão'} onClick={()=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==tx.id)});setDeleteId(null)}} /></span>
+       :<DangerButton className="h-8 w-8 rounded-[10px]" aria-label={`Excluir ${tx.descricao}`} title={tx.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={()=>tx.repete?setRecurrenceDelete({id:tx.id,date:row.date}):setDeleteId(tx.id)} />}
      </div>})}
       </div>}
        {currentOpen&&currentTx.length===0&&<>{transactionDetails(currentTx,row.date,monthHead(month))}{showDailyPlan&&row.planned>0&&<DailyPlanNotice value={row.planned}/>}</>}
-       {nextOpen&&<div className="space-y-1.5 border-t border-border/60 bg-el/40 px-3 py-2.5"><div className="mb-1 flex items-center justify-between gap-2"><p className="min-w-0 text-[9px] font-extrabold uppercase tracking-[.8px] text-t3">{filter==='total'?'Todas as movimentações':'Movimentações filtradas'} de {monthHead(nextDate)} · dia {row.nextDate.slice(-2)}</p>{nextTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:monthKey(nextDate),value:row.nextDate})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}</div>{nextTx.length===0?<p className="rounded-[12px] border border-dashed border-border bg-surface/60 px-3 py-3 text-[10px] text-t3">Nenhuma entrada ou saída neste dia.</p>:nextTx.map(tx=>{const txTagIds=tx.tag_ids?.length?tx.tag_ids:tx.tag_id?[tx.tag_id]:[];const txTags=txTagIds.map(id=>data.flux.tags.find(t=>t.id===id)).filter((item):item is NonNullable<typeof item>=>Boolean(item));return <div key={tx.id} role="button" tabIndex={0} onClick={event=>{if((event.target as HTMLElement).closest('button'))return;onEdit(tx,row.nextDate)}} onKeyDown={event=>{if((event.key==='Enter'||event.key===' ')&&(event.target as HTMLElement).closest('button')===null){event.preventDefault();onEdit(tx,row.nextDate)}}} className="flex cursor-pointer items-center gap-2.5 rounded-[12px] border border-border/70 bg-surface px-2.5 py-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] text-white" style={{background:fluxMeta[tx.tipo].color}}><FluxTypeIcon tipo={tx.tipo} size={13}/></span><span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-t1">{tx.descricao}</span><span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] text-t3">{tx.repete&&<IconRepeat size={9} strokeWidth={2.6}/>} {typeSingular[tx.tipo]}{txTags.map(tg=><span key={tg.id} className="inline-flex items-center gap-[3px] rounded-md px-1.5 py-[2px] text-[8px] font-bold" style={{color:tg.cor,background:`${tg.cor}14`}}><IconTag size={9} strokeWidth={2.6}/>{tg.label}</span>)}</span></span><Currency value={tx.valor} className="shrink-0 text-[11px] font-bold" style={{color:fluxMeta[tx.tipo].color}}/><DangerButton aria-label={`Excluir ${tx.descricao}`} title={tx.repete?'Excluir lançamento recorrente':'Excluir lançamento'} onClick={event=>{event.stopPropagation();tx.repete?setRecurrenceDelete({id:tx.id,date:row.nextDate}):setDeleteId(tx.id)}} className="h-7 w-7"/></div>})}</div>}
+       {nextOpen&&<MovementList tx={nextTx} date={row.nextDate} period={monthHead(nextDate)} filtered={filter!=='total'} tags={data.flux.tags} deleteId={nextDeleteId} onEdit={onEdit} onRequestDelete={(item,date)=>item.repete?setRecurrenceDelete({id:item.id,date}):setDeleteId(item.id)} onCancelDelete={()=>setDeleteId(null)} onConfirmDelete={id=>{mutate(d=>{d.flux.lancamentos=d.flux.lancamentos.filter(item=>item.id!==id)});setDeleteId(null)}} extraAction={nextTx.some(item=>item.tipo==='cartao')&&<button type="button" aria-label="Alterar dia dos cartões neste mês" onClick={()=>setCardDayEditor({monthKey:monthKey(nextDate),value:row.nextDate})} className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[8px] font-bold normal-case tracking-normal text-t2 transition active:scale-95">Alterar dia</button>}/>}
    </div>
   })}
   <div className="flux-closing bg-[linear-gradient(180deg,var(--surface),color-mix(in_srgb,var(--flux-orange)_7%,var(--el)))] px-4 pt-5">
@@ -265,8 +301,7 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
     <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
     <div className="mb-3 flex items-center gap-3 px-1"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-flux/10 text-flux"><IconCreditCard size={18}/></span><div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-flux">Lançamentos de cartão</p><h2 className="mt-0.5 truncate text-[17px] font-bold text-t1">Alterar dia</h2></div><button type="button" aria-label="Fechar" onClick={()=>setCardDayEditor(null)} className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface text-t2"><X size={15}/></button></div>
     <p className="mb-3 rounded-[15px] border border-border bg-surface p-3 text-[10px] leading-relaxed text-t2">Somente os lançamentos de cartão de <b className="text-t1">{cardMonthLabel(cardDayEditor.monthKey)}</b> serão alterados. Os outros meses continuarão iguais.</p>
-    <div className="rounded-[18px] border border-border bg-surface p-3"><p className="mb-2 text-[9px] font-bold uppercase tracking-[.8px] text-t3">Novo dia no mês</p><AurvmDatePicker value={cardDayEditor.value} onChange={value=>{if(value.slice(0,7)===cardDayEditor.monthKey)setCardDayEditor(current=>current?{...current,value}:current)}} ariaLabel="Escolher novo dia dos cartões" accentColor="var(--flux-orange)" className="h-10 w-full justify-between bg-el/45 px-3"/><p className="mt-2 text-[9px] text-t3">Escolha uma data dentro de {cardMonthLabel(cardDayEditor.monthKey)}.</p></div>
-    <button type="button" onClick={()=>updateCardDay(cardDayEditor.monthKey,cardDayEditor.value)} className="mt-3 h-11 w-full rounded-[14px] bg-flux text-[12px] font-bold text-white shadow-[0_8px_20px_rgba(255,105,36,.18)]">Aplicar somente neste mês</button>
+    <div className="rounded-[18px] border border-border bg-surface p-3"><p className="mb-2 text-[9px] font-bold uppercase tracking-[.8px] text-t3">Novo dia no mês</p><AurvmDatePicker value={cardDayEditor.value} onChange={value=>{if(value.slice(0,7)===cardDayEditor.monthKey){setCardDayEditor(current=>current?{...current,value}:current);updateCardDay(cardDayEditor.monthKey,value)}}} ariaLabel="Escolher novo dia dos cartões" accentColor="var(--flux-orange)" className="h-10 w-full justify-between bg-el/45 px-3"/><p className="mt-2 text-[9px] text-t3">Salvo automaticamente ao escolher uma data dentro de {cardMonthLabel(cardDayEditor.monthKey)}.</p></div>
     {hasCardDayAdjustment(cardDayEditor.monthKey)&&<button type="button" onClick={()=>updateCardDay(cardDayEditor.monthKey,null)} className="mt-2 h-10 w-full rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Restaurar dia do vencimento</button>}
     <button type="button" onClick={()=>setCardDayEditor(null)} className="mt-1 h-10 w-full text-[11px] font-bold text-t2">Cancelar</button>
    </div>
@@ -275,7 +310,8 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
 }
 
 function ChainIcon({tipo,dashed}:{tipo:FluxTipo;dashed?:boolean}){return <span className={cn('grid h-5 w-5 shrink-0 place-items-center rounded-full',dashed&&'border border-dashed')} style={{color:fluxMeta[tipo].color,background:dashed?'transparent':`${fluxMeta[tipo].color}18`,borderColor:dashed?fluxMeta[tipo].color:undefined}}><FluxTypeIcon tipo={tipo} size={11}/></span>}
-function TotalsCardHeader({title,caption,icon}:{title:string;caption:string;icon:ReactNode}){return <div className="flex items-center gap-3 border-b border-border/60 bg-el/20 px-4 py-3.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-surface text-flux shadow-[0_2px_7px_rgba(15,37,64,.06)]">{icon}</span><span className="min-w-0"><span className="block text-[12px] font-bold text-t1">{title}</span><span className="mt-0.5 block text-[9px] text-t3">{caption}</span></span></div>}
+function TotalsCardHeader({title,caption,right}:{title:string;caption:string;right?:ReactNode}){return <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3.5"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/><span className="min-w-0 flex-1"><span className="block text-[11px] font-bold text-t1">{title}</span><span className="mt-0.5 block text-[9px] text-t3">{caption}</span></span>{right}</div>}
+function TotalsKpi({label,children}:{label:string;children:ReactNode}){return <div className="min-w-0 rounded-[16px] bg-surface p-[13px] shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="truncate font-mono text-[8.5px] font-medium uppercase tracking-[.8px] text-t3">{label}</p><div className="mt-[7px] truncate">{children}</div></div>}
 
 function Totais({monthKey:key}:{monthKey:string}){
  const data=useFinancas(s=>s.data)
@@ -285,30 +321,28 @@ function Totais({monthKey:key}:{monthKey:string}){
  const perf=entrada-saida-diario-economia-cartao;const rate=entrada?economia/entrada*100:0;const custo=saida+diario+cartao
  const today=new Date();const totalDays=new Date(Number(key.slice(0,4)),Number(key.slice(5,7)),0).getDate();const currentMonth=key===monthKey(today)
  const daysPassed=Math.max(1,currentMonth?today.getDate():totalDays);const remaining=Math.max(0,totalDays-daysPassed);const mediaDiaria=diario/daysPassed;const planejado=data.flux.valor_diario_planejado
- const positive=perf>=0;const resultColor=positive?'var(--green)':'var(--red)';const rawMonthName=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(Number(key.slice(0,4)),Number(key.slice(5,7))-1,1));const monthName=rawMonthName.charAt(0).toUpperCase()+rawMonthName.slice(1)
+ const positive=perf>=0;const rawMonthName=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(Number(key.slice(0,4)),Number(key.slice(5,7))-1,1));const monthName=rawMonthName.charAt(0).toUpperCase()+rawMonthName.slice(1)
+ const resultGradient='linear-gradient(155deg,#1b2f4a 0%,#3f6c8f 55%,#8fb5c9 108%)'
  const movementRows=(Object.keys(fluxMeta) as FluxTipo[]).map(type=>({type,value:sums(type)}))
  return <div className="space-y-4 pb-[30px]">
-  <section className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_8px_24px_rgba(15,37,64,.07)]" style={{background:`linear-gradient(145deg,color-mix(in srgb, ${resultColor} 12%, var(--surface)),var(--surface) 72%)`}}>
-   <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2.5"><span className="grid h-10 w-10 place-items-center rounded-[13px] text-white" style={{background:resultColor}}><CalendarRange size={18}/></span><div><p className="text-[9px] font-extrabold uppercase tracking-[1px]" style={{color:resultColor}}>Resultado do mês</p><p className="mt-0.5 text-[11px] font-semibold text-t2">{monthName}</p></div></div><span className="rounded-full border border-border bg-surface/80 px-2.5 py-1 text-[8px] font-bold text-t3">{tx.length} movimentações</span></div>
-   <div className="mt-4"><Currency value={perf} className="text-[32px] font-black tracking-[-1.4px]" style={{color:resultColor}}/><p className="mt-1 text-[10px] text-t2">{positive?'valor disponível depois de todos os compromissos':'valor que ultrapassou as entradas do mês'}</p></div>
-   <div className="mt-4 grid grid-cols-3 border-t pt-3" style={{borderColor:`color-mix(in srgb, ${resultColor} 16%, var(--border))`}}>
-    <div><p className="text-[8px] font-bold uppercase tracking-[.6px] text-t3">Economizado</p><p className="number mt-1 text-[13px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</p></div>
-    <div className="border-x border-border px-3"><p className="text-[8px] font-bold uppercase tracking-[.6px] text-t3">Custo de vida</p><Currency value={custo} className="mt-1 text-[12px] font-bold text-t1"/></div>
-    <div className="pl-3"><p className="text-[8px] font-bold uppercase tracking-[.6px] text-t3">Média diária</p><Currency value={mediaDiaria} className="mt-1 text-[12px] font-bold text-t1"/></div>
-   </div>
+  <section className="overflow-hidden rounded-[24px] px-[22px] pb-[22px] pt-5 shadow-[0_8px_24px_rgba(15,37,64,.08)]" style={{background:resultGradient}}>
+   <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><CalendarRange size={13} className="text-white/85"/><div><p className="font-mono text-[9.5px] font-bold uppercase tracking-[1.5px] text-white/85">Resultado do mês</p><p className="mt-0.5 text-[11px] font-semibold text-white">{monthName}</p></div></div><span className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[8px] font-bold text-white/85">{tx.length} movimentações</span></div>
+   <div className="mt-4"><Currency value={perf} className="text-[40px] font-black leading-none tracking-[-2px] text-white" symbolClassName="text-white opacity-55" amountClassName="text-white"/><p className="mt-2 text-[11px] text-white">{positive?'valor disponível depois de todos os compromissos':'valor que ultrapassou as entradas do mês'}</p></div>
   </section>
+  <div className="grid grid-cols-3 gap-2.5"><TotalsKpi label="Economizado"><span className="number text-[15px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</span></TotalsKpi><TotalsKpi label="Custo de vida"><Currency value={custo} className="text-[15px] font-bold text-t1"/></TotalsKpi><TotalsKpi label="Média diária"><Currency value={mediaDiaria} className="text-[15px] font-bold text-t1"/></TotalsKpi></div>
 
-  <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><TotalsCardHeader title="Composição do mês" caption="Quanto cada categoria movimentou" icon={<IconCashBanknoteMinus size={17}/>}/><div className="grid grid-cols-2 gap-2 p-3">{movementRows.map(({type,value},index)=><div key={type} className={cn('rounded-[14px] border border-border bg-el/35 p-3',index===movementRows.length-1&&'col-span-2')}><div className="flex items-center justify-between gap-2"><span className="grid h-8 w-8 place-items-center rounded-[10px]" style={{color:fluxMeta[type].color,background:`${fluxMeta[type].color}14`}}><FluxTypeIcon tipo={type} size={14}/></span><Currency value={value} className="text-[12px] font-bold" style={{color:fluxMeta[type].color}}/></div><p className="mt-2 text-[10px] font-semibold text-t2">{fluxMeta[type].label}</p></div>)}</div></Card>
+  <Card className="overflow-hidden rounded-[22px] border-0 shadow-[0_5px_18px_rgba(15,37,64,.06)]"><TotalsCardHeader title="Composição do mês" caption="Quanto cada categoria movimentou"/><div className="divide-y divide-border/60 px-4">{movementRows.map(({type,value})=><div key={type} className="flex items-center gap-3 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px]" style={{color:fluxMeta[type].color,background:`${fluxMeta[type].color}14`}}><FluxTypeIcon tipo={type} size={14}/></span><span className="min-w-0 flex-1 text-[11px] font-semibold text-t2">{fluxMeta[type].label}</span><Currency value={value} className="text-[12px] font-bold" style={{color:fluxMeta[type].color}}/></div>)}</div></Card>
 
-  <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><TotalsCardHeader title="Indicadores" caption="Leitura rápida da saúde do mês" icon={<IconPigMoney size={17}/>}/><div className="grid grid-cols-2 gap-px bg-border"><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="economia"/><span className="text-[9px] font-bold text-t3">Meta de economia</span></div><div className="mt-2 flex items-end justify-between gap-2"><Currency value={economia} className="text-[20px] font-bold text-green"/><span className="number mb-0.5 rounded-full bg-green/10 px-2 py-1 text-[8px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-el"><i className="block h-full rounded-full bg-green" style={{width:`${Math.min(100,rate)}%`}}/></div><p className="mt-2 text-[8px] text-t3">{rate>=20?'acima do ideal':'ideal sugerido: 20%'}</p></div><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="diario"/><span className="text-[9px] font-bold text-t3">Controle diário</span></div><Currency value={mediaDiaria} className="mt-2 text-[20px] font-bold text-t1"/><p className="mt-2 text-[8px] text-t3">planejado <Currency value={planejado} className="font-bold"/></p><span className={cn('mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-bold',mediaDiaria<=planejado?'bg-green/10 text-green':'bg-red/10 text-red')}>{mediaDiaria<=planejado?'dentro do plano':'acima do plano'}</span></div></div></Card>
+  <Card className="overflow-hidden rounded-[22px] border-0 shadow-[0_5px_18px_rgba(15,37,64,.06)]"><TotalsCardHeader title="Indicadores" caption="Leitura rápida da saúde do mês"/><div className="divide-y divide-border/60 px-4"><div className="py-3"><div className="flex items-center gap-2.5"><ChainIcon tipo="economia"/><span className="flex-1 text-[10px] font-semibold text-t2">Meta de economia</span><Currency value={economia} className="text-[15px] font-bold text-green"/><span className="number rounded-full bg-green/10 px-2 py-1 text-[8px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</span></div><div className="mt-2 flex items-center gap-2"><div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-el"><i className="block h-full rounded-full bg-green" style={{width:`${Math.min(100,rate)}%`}}/></div><p className="shrink-0 text-[8px] text-t3">{rate>=20?'acima do ideal':'ideal: 20%'}</p></div></div><div className="flex items-center gap-2.5 py-3"><ChainIcon tipo="diario"/><div className="min-w-0 flex-1"><p className="text-[10px] font-semibold text-t2">Controle diário</p><p className="mt-0.5 text-[8px] text-t3">planejado <Currency value={planejado} className="font-bold"/></p></div><div className="text-right"><Currency value={mediaDiaria} className="text-[15px] font-bold text-t1"/><span className={cn('mt-1 inline-flex rounded-full px-2 py-1 text-[8px] font-bold',mediaDiaria<=planejado?'bg-green/10 text-green':'bg-red/10 text-red')}>{mediaDiaria<=planejado?'dentro do plano':'acima do plano'}</span></div></div></div></Card>
 
-  <section className="rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]" style={{background:`color-mix(in srgb, ${fluxMeta.diario.color} 6%, var(--surface))`}}><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><IconReceiptDollar size={18}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[.8px]" style={{color:fluxMeta.diario.color}}>Projeção até o fim do mês</p><p className="mt-1 text-[10px] text-t2">{remaining} {remaining===1?'dia restante':'dias restantes'} no valor planejado</p></div><Currency value={remaining*planejado} className="text-[14px] font-bold" style={{color:fluxMeta.diario.color}}/></div><div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-3"><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">Pelo planejamento</p><Currency value={remaining*planejado} className="mt-1 text-[11px] font-bold text-t1"/></div><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">No ritmo atual</p><Currency value={mediaDiaria*remaining} className="mt-1 text-[11px] font-bold" style={{color:mediaDiaria<=planejado?'var(--green)':'var(--red)'}}/></div></div></section>
+  <Card className="overflow-hidden rounded-[22px] border-0 shadow-[0_5px_18px_rgba(15,37,64,.06)]"><TotalsCardHeader title="Projeção até o fim do mês" caption={`${remaining} ${remaining===1?'dia restante':'dias restantes'} no valor planejado`} right={<Currency value={remaining*planejado} className="text-[14px] font-bold" style={{color:fluxMeta.diario.color}}/>}/><div className="divide-y divide-border/60 px-4"><div className="flex items-center gap-3 py-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><IconReceiptDollar size={14}/></span><div className="min-w-0 flex-1"><p className="text-[10px] font-semibold text-t2">Pelo planejamento</p><p className="mt-0.5 text-[8px] text-t3">valor previsto até o fim do mês</p></div><Currency value={remaining*planejado} className="text-[12px] font-bold" style={{color:fluxMeta.diario.color}}/></div><div className="flex items-center gap-3 py-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px] bg-el text-t3"><IconChartLine size={14}/></span><div className="min-w-0 flex-1"><p className="text-[10px] font-semibold text-t2">No ritmo atual</p><p className="mt-0.5 text-[8px] text-t3">baseado na média diária</p></div><Currency value={mediaDiaria*remaining} className="text-[12px] font-bold" style={{color:mediaDiaria<=planejado?'var(--green)':'var(--red)'}}/></div></div></Card>
  </div>
 }
 
 function Tags({monthKey:key}:{monthKey:string}){
  const {data,mutate}=useFinancas();const [search,setSearch]=useState('')
  const [creating,setCreating]=useState(false);const [newLabel,setNewLabel]=useState('');const [newColor,setNewColor]=useState('#FF6A1A');const [deleteId,setDeleteId]=useState<string|null>(null)
+ const [editingTag,setEditingTag]=useState<Tag|null>(null);const [editLabel,setEditLabel]=useState('');const [editColor,setEditColor]=useState('#FF6A1A')
  const sort=data.config.preferencias?.flux_tags_ordenacao??'valor'
  const setSort=(value:'valor'|'nome')=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_tags_ordenacao=value})
  const [showHidden,setShowHidden]=useState(false)
@@ -325,6 +359,13 @@ function Tags({monthKey:key}:{monthKey:string}){
   mutate(d=>d.flux.tags.push({id:uid(),label,cor:newColor}))
   setNewLabel('');setNewColor('#FF6A1A');setCreating(false)
  }
+ const startEdit=(tag:Tag)=>{setEditingTag(tag);setEditLabel(tag.label);setEditColor(tag.cor)}
+ const persistEdit=(nextLabel=editLabel,nextColor=editColor)=>{
+  if(!editingTag)return
+  const label=nextLabel.trim()
+  if(!label||data.flux.tags.some(tag=>tag.id!==editingTag.id&&tag.label.localeCompare(label,'pt-BR',{sensitivity:'accent'})===0))return
+  mutate(d=>{const target=d.flux.tags.find(tag=>tag.id===editingTag.id);if(target){target.label=label;target.cor=nextColor}})
+ }
  const deleteTag=()=>{
   if(!deleteId)return
   mutate(d=>{
@@ -340,8 +381,11 @@ function Tags({monthKey:key}:{monthKey:string}){
   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px]" style={{color:tag.cor,background:`${tag.cor}18`}}><IconTag size={17}/></span>
   <div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-t1">{tag.label}</p><p className="mt-0.5 text-[9px] text-t3">Total do mês</p></div>
   <Currency value={total} className="text-[13px] font-bold" style={{color:tag.cor}}/>
-  <button aria-label={tag.oculta?`Mostrar ${tag.label}`:`Ocultar ${tag.label}`} onClick={()=>toggleHide(tag.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] border border-border bg-el/60 text-t3 transition active:scale-95">{tag.oculta?<IconEye size={13}/>:<IconEyeOff size={13}/>}</button>
-  <DangerButton aria-label={`Excluir tag ${tag.label}`} onClick={()=>setDeleteId(tag.id)} className="h-8 w-8 rounded-[11px]"/>
+  <div className="flex shrink-0 items-center gap-1">
+   <button type="button" aria-label={`Editar tag ${tag.label}`} onClick={()=>startEdit(tag)} className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] border border-border bg-el/60 text-t3 transition active:scale-95"><IconPencil size={13}/></button>
+   <DangerButton aria-label={`Excluir tag ${tag.label}`} onClick={()=>setDeleteId(tag.id)} className="h-8 w-8 rounded-[11px]"/>
+   <button type="button" aria-label={tag.oculta?`Mostrar ${tag.label}`:`Ocultar ${tag.label}`} onClick={()=>toggleHide(tag.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] border border-border bg-el/60 text-t3 transition active:scale-95">{tag.oculta?<IconEye size={13}/>:<IconEyeOff size={13}/>}</button>
+  </div>
  </div>
  return <div className="space-y-4 pb-[30px]">
   <div className="flex items-center justify-between gap-3"><div><p className="flex items-center gap-2 text-[13px] font-bold text-t1"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Suas tags</p><p className="mt-1 pl-4 text-[9px] text-t3">Organize e categorize seus lançamentos</p></div><button type="button" onClick={()=>setCreating(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:'var(--flux-orange)',background:'color-mix(in oklch,var(--flux-orange) 12%,transparent)'}}>+ Nova tag</button></div>
@@ -373,6 +417,14 @@ function Tags({monthKey:key}:{monthKey:string}){
     <div className="mt-4 grid grid-cols-2 gap-2"><button onClick={()=>setDeleteId(null)} className="h-11 rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Cancelar</button><button onClick={deleteTag} className="h-11 rounded-[14px] bg-red text-[11px] font-bold text-white">Excluir tag</button></div>
    </div>
   </div>}
+  {editingTag&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setEditingTag(null)}>
+   <div role="dialog" aria-label="Editar tag" className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
+    <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+    <div className="mb-4 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-[13px]" style={{color:editColor,background:`${editColor}18`}}><IconTag size={18}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-flux">Organização</p><h2 className="mt-0.5 text-[18px] font-bold text-t1">Editar tag</h2></div><button type="button" aria-label="Fechar" onClick={()=>setEditingTag(null)} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-el text-t3"><X size={15}/></button></div>
+    <Card className="p-3.5"><label><span className="mb-1.5 block text-[8px] font-bold uppercase tracking-[.7px] text-t3">Nome da tag</span><Input autoFocus maxLength={28} value={editLabel} onChange={event=>{const next=event.target.value;setEditLabel(next);persistEdit(next,editColor)}} className="bg-surface focus:border-flux"/></label><div className="mt-4"><span className="mb-2 block text-[8px] font-bold uppercase tracking-[.7px] text-t3">Cor</span><div className="grid grid-cols-8 gap-2">{colors.map(color=><button type="button" key={color} aria-label={`Usar cor ${color}`} onClick={()=>{setEditColor(color);persistEdit(editLabel,color)}} className={cn('relative grid aspect-square place-items-center rounded-full border-2 transition active:scale-90',editColor===color?'border-t1':'border-transparent')}><span className="h-6 w-6 rounded-full" style={{background:color}}/>{editColor===color&&<IconCheck size={12} className="absolute text-white"/>}</button>)}</div></div></Card>
+    <div className="mt-4 flex items-center justify-between gap-2"><span className="text-[9px] font-semibold text-t3">Salvo automaticamente</span><button type="button" onClick={()=>setEditingTag(null)} className="h-11 rounded-[14px] border border-border bg-surface px-4 text-[11px] font-bold text-t2">Fechar</button></div>
+   </div>
+  </div>}
  </div>
 }
 
@@ -395,19 +447,22 @@ function FluxMenu(){
   <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Saldo inicial do Flux</p><p className="mt-1 pl-4 text-[9px] text-t3">Base exclusiva deste módulo · não altera a Tabela</p><MoneyInput allowNegative aria-label="Saldo inicial do Flux" value={data.flux.saldo_inicial??0} onValueChange={value=>mutate(d=>{d.flux.saldo_inicial=value})} className="number mt-3 h-11 border-flux/20 bg-el focus-within:border-flux"/></Card>
   <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Planejamento diário</p><p className="mt-1 pl-4 text-[9px] text-t3">Valor usado nas previsões futuras</p><MoneyInput value={data.flux.valor_diario_planejado} onValueChange={value=>mutate(d=>{d.flux.valor_diario_planejado=value})} className="number mt-3 h-11 border-flux/20 bg-el focus-within:border-flux"/></Card>
   <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
-   <div className="flex items-center justify-between"><div><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Cartões</p><p className="mt-1 pl-4 text-[9px] text-t3">Fechamento e vencimento das faturas</p></div>{!addingCard&&<button type="button" onClick={()=>setAddingCard(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:'var(--flux-orange)',background:'color-mix(in oklch,var(--flux-orange) 12%,transparent)'}}>+ Novo</button>}</div>
+    <div className="flex items-center justify-between"><div><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Cartões</p><p className="mt-1 pl-4 text-[9px] text-t3">Fechamento e vencimento das faturas</p></div>{!addingCard&&!editingCard&&<button type="button" onClick={()=>setAddingCard(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:'var(--flux-orange)',background:'color-mix(in oklch,var(--flux-orange) 12%,transparent)'}}>+ Novo</button>}</div>
    <div className="mt-3 space-y-2">
-    {cartoes.map(card=><div key={card.id} className="flex items-center gap-2.5 rounded-[14px] border border-border bg-el/40 p-3">
-     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-flux/10 text-flux"><IconCreditCard size={17}/></span>
+    {cartoes.map(card=><div key={card.id} className="flex min-h-[72px] items-center gap-2.5 rounded-[14px] border border-border bg-el/40 p-3.5">
+     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] border border-border bg-surface text-flux shadow-[0_2px_6px_rgba(15,37,64,.06)]"><IconCreditCard size={17}/></span>
      <div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-t1">{card.nome}</p><p className="mt-0.5 text-[9px] text-t3">fecha dia {card.fechamento} · vence dia {card.vencimento}</p></div>
      <div className="shrink-0 text-right"><p className="text-[8px] font-bold uppercase tracking-[.5px] text-t3">Próx. venc.</p><p className="number mt-0.5 text-[11px] font-bold text-flux">{nextDueLabel(card.vencimento)}</p></div>
-     <DangerButton className="h-10 w-10 rounded-[11px]" aria-label={`Excluir cartão ${card.nome}`} onClick={()=>mutate(d=>{d.flux.cartoes=(d.flux.cartoes??[]).filter(x=>x.id!==card.id)})}/>
+      <button type="button" aria-label={`Editar cartão ${card.nome}`} onClick={()=>{setAddingCard(false);setEditingCard(card)}} className="grid h-10 w-10 shrink-0 place-items-center rounded-[11px] border border-border bg-surface text-t3 transition active:scale-95"><IconPencil size={14}/></button>
+      <DangerButton className="h-10 w-10 rounded-[11px]" aria-label={`Excluir cartão ${card.nome}`} onClick={()=>setCardToDelete(card)}/>
     </div>)}
     {cartoes.length===0&&!addingCard&&<p className="rounded-[14px] border border-dashed border-border px-3 py-4 text-center text-[10px] text-t3">Nenhum cartão cadastrado</p>}
    </div>
-   {addingCard&&<NewCard close={()=>setAddingCard(false)}/>}
-  </Card>
-  <TemperaturaCard/>
+    {addingCard&&<NewCard close={()=>setAddingCard(false)}/>}
+    {editingCard&&<NewCard card={editingCard} close={()=>setEditingCard(null)}/>}
+   </Card>
+   <TemperaturaCard/>
+   {cardToDelete&&<ConfirmDialog title="Excluir cartão?" message={`As movimentações ligadas a ${cardToDelete.nome} serão mantidas, mas ficarão sem cartão associado.`} confirmLabel="Excluir cartão" onConfirm={removeCard} onCancel={()=>setCardToDelete(null)}/>}
  </div>
 }
 
@@ -440,16 +495,21 @@ function NewCard({close,card}:{close:()=>void;card?:Cartao}){
  const [nome,setNome]=useState(card?.nome??'');const [fechamento,setFechamento]=useState(card?.fechamento??8);const [vencimento,setVencimento]=useState(card?.vencimento??15)
  const chip='inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[10px] font-semibold text-t2'
  const clampDay=(value:number)=>Math.min(31,Math.max(1,value||1))
+ const persistCard=(nextNome=nome,nextFechamento=fechamento,nextVencimento=vencimento)=>{
+  if(!card||!nextNome.trim())return
+  mutate(d=>{const target=d.flux.cartoes?.find(item=>item.id===card.id);if(target){target.nome=nextNome.trim();target.fechamento=nextFechamento;target.vencimento=nextVencimento}})
+ }
+ const saveNewCard=()=>{if(!nome.trim())return;mutate(d=>{d.flux.cartoes=[...(d.flux.cartoes??[]),{id:uid(),nome:nome.trim(),fechamento,vencimento}]});close()}
  return <div className="mt-3 rounded-[14px] border border-border bg-el p-3">
-  <Input autoFocus placeholder="Nome do cartão" value={nome} onChange={e=>setNome(e.target.value)} className="h-9 bg-surface focus:border-flux"/>
+  <Input autoFocus placeholder="Nome do cartão" value={nome} onChange={e=>{const next=e.target.value;setNome(next);persistCard(next,fechamento,vencimento)}} className="h-9 bg-surface focus:border-flux"/>
   <div className="mt-2 flex flex-wrap items-center gap-2">
-   <label className={chip}>fecha dia<input type="number" min="1" max="31" value={fechamento} onChange={e=>setFechamento(clampDay(Number(e.target.value)))} className="no-spin w-7 bg-transparent text-center outline-none"/></label>
-   <label className={chip}>vence dia<input type="number" min="1" max="31" value={vencimento} onChange={e=>setVencimento(clampDay(Number(e.target.value)))} className="no-spin w-7 bg-transparent text-center outline-none"/></label>
+   <label className={chip}>fecha dia<input type="number" min="1" max="31" value={fechamento} onChange={e=>{const next=clampDay(Number(e.target.value));setFechamento(next);persistCard(nome,next,vencimento)}} className="no-spin w-7 bg-transparent text-center outline-none"/></label>
+   <label className={chip}>vence dia<input type="number" min="1" max="31" value={vencimento} onChange={e=>{const next=clampDay(Number(e.target.value));setVencimento(next);persistCard(nome,fechamento,next)}} className="no-spin w-7 bg-transparent text-center outline-none"/></label>
    <span className="ml-auto text-[9px] font-semibold text-flux">próx.: {nextDueLabel(vencimento)}</span>
   </div>
   <div className="mt-2.5 flex gap-2">
-   <Button disabled={!nome.trim()} onClick={()=>{mutate(d=>{d.flux.cartoes=[...(d.flux.cartoes??[]),{id:uid(),nome:nome.trim(),fechamento,vencimento}]});close()}} className="h-8 flex-1 bg-flux text-xs">Salvar cartão</Button>
-   <button onClick={close} className="grid h-8 w-8 place-items-center rounded-xl border border-border bg-surface text-t3"><X size={14}/></button>
+    {card?<span className="flex h-8 flex-1 items-center justify-center text-[9px] font-semibold text-t3">Salvo automaticamente</span>:<Button disabled={!nome.trim()} onClick={saveNewCard} className="h-8 flex-1 bg-flux text-xs">Salvar cartão</Button>}
+    <button type="button" onClick={close} className="grid h-8 w-8 place-items-center rounded-xl border border-border bg-surface text-t3"><X size={14}/></button>
   </div>
  </div>
 }
@@ -512,32 +572,35 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
   const [installmentDraft,setInstallmentDraft]=useState(edit?.repete?.vezes?String(edit.repete.vezes):'')
   const [installmentFocused,setInstallmentFocused]=useState(false)
   const [dateScopeOpen,setDateScopeOpen]=useState(false)
+  const editReady=useRef(false)
  const cartoes:Cartao[]=data.flux.cartoes??[]
  const [cartaoId,setCartaoId]=useState(edit?.cartao_id??cartoes[0]?.id??'')
  const cartao=cartoes.find(c=>c.id===cartaoId)
  const color=type?fluxMeta[type].color:'var(--flux-orange)'
  const row='flex min-h-[56px] items-center gap-3 border-b border-border last:border-0'
  const formOriginalDate=occurrenceDate??edit?.data
- const formDateChanged=Boolean(edit?.repete&&formOriginalDate&&date!==formOriginalDate)
- const formValueChanged=Boolean(edit?.repete&&edit&&value!==edit.valor)
- const formRecurrenceChanged=Boolean(edit?.repete&&frequencia!==(edit.repete.frequencia??'mensal'))
+  const formDateChanged=Boolean(edit?.repete&&formOriginalDate&&date!==formOriginalDate)
+  const formValueChanged=Boolean(edit?.repete&&edit&&value!==edit.valor)
+  const formRecurrenceChanged=Boolean(edit?.repete&&frequencia!==(edit.repete.frequencia??'mensal'))
+  const recurringScopePending=Boolean(edit?.repete&&(formDateChanged||formValueChanged||formRecurrenceChanged))
  const updateInstallments=(raw:string)=>{const draft=raw.replace(/\D/g,'').slice(0,3);setInstallmentDraft(draft);setVezes(draft?Math.min(120,Number(draft)):0)}
  const selectInstallments=(months:number)=>{setInstallmentDraft(String(months));setVezes(months);setInstallmentFocused(false)}
  const commitInstallments=()=>{const months=Math.min(120,Math.max(0,Number(installmentDraft)||0));setInstallmentDraft(months?String(months):'');setVezes(months);setInstallmentFocused(false)}
  const saveTransaction=(scope:'one'|'future'|null=null)=>{
-  if(!type||!desc||value<=0||(type==='cartao'&&!cartoes.length))return
+  const cleanDesc=desc.trim()
+  if(!type||!cleanDesc||value<=0||(type==='cartao'&&!cartoes.length))return
   const selectedFormDate=occurrenceDate??edit?.data
   const recurrenceRule:'data'|'quinto_util'=repete&&frequencia==='mensal'&&(isFifthBusinessDay(date)||(edit?.repete?.regra==='quinto_util'&&date===selectedFormDate))?'quinto_util':'data'
   const nextRepete=repete?{vezes:vezes>0?vezes:null,frequencia,regra:recurrenceRule,...(edit?.repete?.excluidas?{excluidas:edit.repete.excluidas}: {})}:null
   mutate(d=>{
-   if(!edit){d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags,repete:nextRepete,cartao_id:type==='cartao'?(cartaoId||null):null});return}
+   if(!edit){d.flux.lancamentos.push({id:uid(),data:date,tipo:type,valor:value,descricao:cleanDesc,tag_id:tags[0]??null,tag_ids:tags,repete:nextRepete,cartao_id:type==='cartao'?(cartaoId||null):null});return}
    const current=d.flux.lancamentos.find(item=>item.id===edit.id)
    if(!current)return
    const selectedDate=occurrenceDate??current.data
    const dateChanged=Boolean(current.repete&&date!==selectedDate)
    const valueChanged=Boolean(current.repete&&value!==current.valor)
    const recurrenceChanged=dateChanged||valueChanged||formRecurrenceChanged
-   const fields={tipo:type,valor:value,descricao:desc,tag_id:tags[0]??null,tag_ids:tags}
+   const fields={tipo:type,valor:value,descricao:cleanDesc,tag_id:tags[0]??null,tag_ids:tags}
    if(scope==='one'&&recurrenceChanged&&current.repete){
     current.repete.excluidas=Array.from(new Set([...(current.repete.excluidas??[]),selectedDate]))
      d.flux.lancamentos.push({id:uid(),data:date,...fields,repete:null,cartao_id:type==='cartao'?(cartaoId||null):null})
@@ -560,10 +623,35 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
   })
   close()
  }
- const submit=()=>{
-  if(edit?.repete&&(formDateChanged||formValueChanged||formRecurrenceChanged)){setDateScopeOpen(true);return}
-  saveTransaction()
+  const submit=()=>{
+   if(edit?.repete&&(formDateChanged||formValueChanged||formRecurrenceChanged)){setDateScopeOpen(true);return}
+   saveTransaction()
  }
+ const persistSimpleEdit=()=>{
+  const cleanDesc=desc.trim()
+  if(!edit||!type||!cleanDesc||value<=0||(type==='cartao'&&!cartoes.length)||recurringScopePending)return
+  const selectedFormDate=occurrenceDate??edit.data
+  const recurrenceRule:'data'|'quinto_util'=repete&&frequencia==='mensal'&&(isFifthBusinessDay(date)||(edit.repete?.regra==='quinto_util'&&date===selectedFormDate))?'quinto_util':'data'
+  const nextRepete=repete?{vezes:vezes>0?vezes:null,frequencia,regra:recurrenceRule,...(edit.repete?.excluidas?{excluidas:edit.repete.excluidas}: {})}:null
+  mutate(d=>{
+   const current=d.flux.lancamentos.find(item=>item.id===edit.id)
+   if(!current)return
+   current.data=occurrenceDate&&occurrenceDate!==current.data?current.data:date
+   current.tipo=type
+   current.valor=value
+   current.descricao=cleanDesc
+   current.tag_id=tags[0]??null
+   current.tag_ids=tags
+   current.repete=nextRepete
+   if(type==='cartao')current.cartao_id=cartaoId||null
+   else delete current.cartao_id
+  })
+ }
+ useEffect(()=>{
+  if(!edit)return
+  if(!editReady.current){editReady.current=true;return}
+  persistSimpleEdit()
+ },[cartaoId,date,desc,edit?.id,frequencia,repete,recurringScopePending,tags,value,vezes,type])
  return <div className="absolute inset-0 z-50 flex items-end bg-black/70" onClick={close}>
   <div onClick={e=>e.stopPropagation()} className="safe-bottom max-h-[92%] w-full overflow-y-auto rounded-t-[28px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.18)]">
    <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-border"/>
@@ -613,8 +701,8 @@ function NewTransaction({close,edit,occurrenceDate}:{close:()=>void;edit:FluxLan
      <div className={cn(row,'px-4')}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-el text-t2"><IconTag size={15}/></span><AurvmSelect ariaLabel="Tags" multiple values={tags} onValuesChange={setTags} placeholder="Sem tag" searchable searchPlaceholder="Buscar tag" className="h-full flex-1 border-0 bg-transparent px-0 text-[13px]" options={[{value:'',label:'Sem tag',caption:'não categorizar',icon:<IconTag size={13}/>,color:'var(--t3)'},...data.flux.tags.filter(t=>!t.oculta).map(item=>({value:item.id,label:item.label,caption:'tag de movimentação',icon:<IconTag size={13}/>,color:item.cor}))]}/></div>
     </div>
      {type==='cartao'&&cartoes.length===0&&<p className="mt-3 rounded-[12px] border border-red/20 bg-red/[.06] px-3 py-2 text-[9px] text-red">Cadastre um cartão na aba Menu antes de adicionar uma movimentação de cartão.</p>}
-     <button disabled={!desc||value<=0||(type==='cartao'&&!cartoes.length)} onClick={submit} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>{edit?'salvar alterações':`adicionar ${typeSingular[type]}`}</button>
-    <button onClick={close} className="mt-2 h-10 w-full text-sm font-bold text-t2 transition active:scale-95">cancelar</button>
+     {edit&&!recurringScopePending?<p className="mt-4 text-center text-[10px] font-semibold text-t3">Salvo automaticamente</p>:<button disabled={!desc.trim()||value<=0||(type==='cartao'&&!cartoes.length)} onClick={submit} className="mt-4 h-[52px] w-full rounded-[18px] text-sm font-bold text-white shadow-[0_10px_24px_rgba(55,35,20,.12)] transition active:scale-[.98] disabled:shadow-none disabled:opacity-40" style={{background:color}}>{edit?'aplicar alterações':`adicionar ${typeSingular[type]}`}</button>}
+    <button onClick={close} className="mt-2 h-10 w-full text-sm font-bold text-t2 transition active:scale-95">{edit?'fechar':'cancelar'}</button>
    {dateScopeOpen&&<div className="fixed inset-0 z-[80] flex items-end bg-black/70" onClick={()=>setDateScopeOpen(false)}>
     <div onClick={event=>event.stopPropagation()} className="safe-bottom w-full rounded-t-[26px] border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-18px_44px_rgba(0,0,0,.2)]">
      <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>

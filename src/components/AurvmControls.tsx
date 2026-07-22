@@ -70,7 +70,7 @@ const dateLabel=(value:string)=>{const {year,month,day}=dateParts(value);return 
 const monthTitle=(date:Date)=>{const label=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(date);return label.charAt(0).toUpperCase()+label.slice(1)}
 const weekdays=['S','T','Q','Q','S','S','D']
 const shiftedDateISO=(amount:number)=>{const date=new Date();date.setDate(date.getDate()+amount);return dateISO(date)}
-const fifthBusinessDayISO=(view:Date)=>{let count=0;for(let day=1;day<=31;day++){const date=new Date(view.getFullYear(),view.getMonth(),day);if(date.getMonth()!==view.getMonth())break;if(date.getDay()!==0){count++;if(count===5)return dateISO(date)}}return dateISO(view)}
+const fifthBusinessDayISO=(view:Date)=>{let count=0;for(let day=1;day<=31;day++){const date=new Date(view.getFullYear(),view.getMonth(),day);if(date.getMonth()!==view.getMonth())break;if(date.getDay()!==0&&date.getDay()!==6){count++;if(count===5)return dateISO(date)}}return dateISO(view)}
 
 export function AurvmDatePicker({value,onChange,ariaLabel='Data',className,accentColor='var(--flux-orange)',compact=false}:{value:string;onChange:(value:string)=>void;ariaLabel?:string;className?:string;accentColor?:string;compact?:boolean}){
   const initial=dateParts(value||dateISO(new Date()))

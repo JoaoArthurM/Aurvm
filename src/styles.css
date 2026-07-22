@@ -40,10 +40,21 @@ button { -webkit-user-select: none; user-select: none; }
   margin-bottom:calc(-60px - max(10px, env(safe-area-inset-bottom)));
 }
 .flux-tabs-sticky {
+  position:sticky;
   top:0;
+  z-index:30;
   padding-top:0;
   background:var(--bg);
+  isolation:isolate;
   box-shadow:none;
+}
+.flux-tabs-sticky-pinned {
+  position:fixed !important;
+  top:0 !important;
+  left:50%;
+  z-index:50;
+  width:min(calc(100% - 40px),350px);
+  transform:translateX(-50%);
 }
 .mark-diamond { display:inline-block; width:6px; height:6px; margin-right:8px; flex-shrink:0; border-radius:1.5px; background:var(--accent); transform:rotate(45deg); }
 .mark-diamond-light { background:rgba(255,255,255,.82); }
@@ -105,13 +116,23 @@ button { -webkit-user-select: none; user-select: none; }
 [data-theme="dark"] .theme-segment-inactive { color:#77717F; }
 [data-theme="dark"] .theme-dark-active { color:#9B8BC2; }
 .login-shell .app-scroll { padding-bottom:0; }
-.login-sunrise { background:linear-gradient(160deg,#182b45 0%,#2a5078 32%,#5a90b0 56%,#afc9d8 84%,#eef4f7 100%); }
+.login-sunrise { background:linear-gradient(160deg,#173A61 0%,#2a5a86 34%,#4D8DB8 60%,#CFE8F5 100%); }
 .login-sunrise-shadow { box-shadow:0 18px 44px rgba(15,37,64,.18); }
 [data-theme="dark"] .login-sunrise-shadow { box-shadow:0 18px 44px rgba(0,0,0,.5); }
-.login-dots { position:absolute; inset:0; overflow:hidden; -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.9) 52%,transparent 90%); mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.9) 52%,transparent 90%); }
-.login-dot-row { position:absolute; left:0; right:0; display:grid; grid-template-columns:repeat(13,1fr); place-items:center; }
-.login-dot-row:nth-child(even) { transform:translateX(calc(100% / 26)); }
-.login-dot-row i { display:block; background:rgba(255,255,255,.78); box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); transform:rotate(45deg); }
+.login-atmosphere { position:absolute; inset:0; overflow:hidden; isolation:isolate; }
+.login-atmosphere::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 25%,rgba(211,240,255,.22),transparent 29%),linear-gradient(122deg,transparent 0 24%,rgba(255,255,255,.08) 24.2%,transparent 24.5% 70%,rgba(255,255,255,.06) 70.2%,transparent 70.5%),linear-gradient(180deg,rgba(13,35,61,.25),transparent 52%,rgba(255,255,255,.15)); opacity:.82; }
+.login-atmosphere::after { content:""; position:absolute; left:-18%; right:-18%; bottom:8%; height:25%; border-top:1px solid rgba(255,255,255,.19); border-bottom:1px solid rgba(255,255,255,.08); border-radius:50%; transform:rotate(-6deg); opacity:.56; }
+.login-atmosphere-halo { position:absolute; display:block; border-radius:999px; filter:blur(3px); }
+.login-atmosphere-halo-one { top:8%; left:10%; width:80%; height:40%; background:radial-gradient(circle at 50% 55%,rgba(184,226,248,.4),rgba(184,226,248,.12) 38%,transparent 72%); }
+.login-atmosphere-halo-two { right:-20%; bottom:18%; width:72%; height:48%; background:radial-gradient(circle,rgba(255,255,255,.22),transparent 67%); opacity:.5; }
+.login-atmosphere-ring { position:absolute; display:block; border:1px solid rgba(225,244,255,.28); border-radius:50%; transform:rotate(-18deg); }
+.login-atmosphere-ring-one { top:12%; left:1%; width:98%; height:46%; border-color:rgba(225,244,255,.19); box-shadow:0 0 0 12px rgba(211,238,252,.025),0 0 38px rgba(213,239,253,.1); transform:rotate(-10deg); }
+.login-atmosphere-streak { position:absolute; display:block; height:1px; background:linear-gradient(90deg,transparent,rgba(240,250,255,.5),transparent); transform-origin:center; opacity:.65; }
+.login-atmosphere-streak-one { top:54%; left:4%; width:56%; transform:rotate(-16deg); }
+.login-atmosphere-streak-two { top:61%; right:-2%; width:58%; transform:rotate(19deg); opacity:.4; }
+.login-atmosphere-crystal { position:absolute; top:14%; left:50%; display:block; width:180px; height:180px; opacity:.34; filter:drop-shadow(0 0 24px rgba(223,246,255,.55)); transform:translateX(-50%); }
+[data-theme="dark"] .login-atmosphere::before { opacity:.52; }
+[data-theme="dark"] .login-atmosphere-ring { border-color:rgba(255,255,255,.2); }
 @keyframes aurvm-sheet-up {
   from { opacity: 0; transform: translate(-50%, 28px); }
   to { opacity: 1; transform: translate(-50%, 0); }

@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
+import { localISO } from '../lib/utils'
 import type { FinancasData } from '../lib/types'
 
 export type BackupRecord={data:FinancasData;updatedAt:number}
@@ -14,16 +15,21 @@ const browserStorage=()=>typeof window==='undefined'?null:window.localStorage
 
 const isRecord=(value:unknown):value is Record<string,unknown>=>Boolean(value&&typeof value==='object'&&!Array.isArray(value))
 const isFiniteNumber=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
-const isDateKey=(value:unknown)=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)
+const isDateKey=(value:unknown)=>{
+  if(typeof value!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value))return false
+  const [year,month,day]=value.split('-').map(Number)
+  const parsed=new Date(year,month-1,day)
+  return parsed.getFullYear()===year&&parsed.getMonth()===month-1&&parsed.getDate()===day
+}
 const isReminder=(value:unknown)=>value==null||(isRecord(value)&&isDateKey(value.data)&&typeof value.observacao==='string')
-const isItem=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&(value.emoji==null||typeof value.emoji==='string')&&isReminder(value.lembrete)
-const isEconomia=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&['recorrente','parcelado','pontual'].includes(String(value.tipo))&&(value.vezes==null||Number.isInteger(value.vezes))&&(value.mes==null||typeof value.mes==='string')&&(value.frequencia==null||['mensal','semanal','diaria','nenhuma'].includes(String(value.frequencia)))
+const isItem=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&value.valor>=0&&(value.emoji==null||typeof value.emoji==='string')&&isReminder(value.lembrete)
+const isEconomia=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&isFiniteNumber(value.valor)&&value.valor>=0&&['recorrente','parcelado','pontual'].includes(String(value.tipo))&&(value.vezes==null||(typeof value.vezes==='number'&&Number.isInteger(value.vezes)&&value.vezes>=1))&&(value.mes==null||(typeof value.mes==='string'&&isDateKey(value.mes+'-01')))&&(value.frequencia==null||['mensal','semanal','diaria','nenhuma'].includes(String(value.frequencia)))
 const isTag=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.label==='string'&&typeof value.cor==='string'&&(value.oculta==null||typeof value.oculta==='boolean')
-const isPersonLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&typeof value.motivo==='string'&&isFiniteNumber(value.valor)&&typeof value.pago==='boolean'&&isReminder(value.lembrete)
+const isPersonLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&typeof value.motivo==='string'&&isFiniteNumber(value.valor)&&value.valor>=0&&typeof value.pago==='boolean'&&isReminder(value.lembrete)
 const isPerson=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.nome==='string'&&typeof value.cor==='string'&&Array.isArray(value.lancamentos)&&value.lancamentos.every(isPersonLoan)
-const isCard=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.nome==='string'&&Number.isInteger(value.fechamento)&&value.fechamento>=1&&value.fechamento<=31&&Number.isInteger(value.vencimento)&&value.vencimento>=1&&value.vencimento<=31
-const isRecurrence=(value:unknown)=>value==null||(isRecord(value)&&(value.vezes==null||Number.isInteger(value.vezes))&&(value.excluidas==null||Array.isArray(value.excluidas)&&value.excluidas.every(isDateKey))&&(value.frequencia==null||['mensal','semanal','diaria'].includes(String(value.frequencia)))&&(value.regra==null||['data','quinto_util'].includes(String(value.regra))))
-const isFluxLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&['entrada','saida','diario','economia','cartao'].includes(String(value.tipo))&&isFiniteNumber(value.valor)&&typeof value.descricao==='string'&&(value.tag_id==null||typeof value.tag_id==='string')&&(value.tag_ids==null||Array.isArray(value.tag_ids)&&value.tag_ids.every(item=>typeof item==='string'))&&isRecurrence(value.repete)&&(value.cartao_id==null||typeof value.cartao_id==='string')&&(value.cartao==null||isRecord(value.cartao)&&(value.cartao.ajustes==null||isRecord(value.cartao.ajustes)&&Object.values(value.cartao.ajustes).every(isDateKey)))
+const isCard=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&typeof value.nome==='string'&&isFiniteNumber(value.fechamento)&&Number.isInteger(value.fechamento)&&value.fechamento>=1&&value.fechamento<=31&&isFiniteNumber(value.vencimento)&&Number.isInteger(value.vencimento)&&value.vencimento>=1&&value.vencimento<=31
+const isRecurrence=(value:unknown)=>value==null||(isRecord(value)&&(value.vezes==null||(typeof value.vezes==='number'&&Number.isInteger(value.vezes)&&value.vezes>=0))&&(value.excluidas==null||Array.isArray(value.excluidas)&&value.excluidas.every(isDateKey))&&(value.frequencia==null||['mensal','semanal','diaria'].includes(String(value.frequencia)))&&(value.regra==null||['data','quinto_util'].includes(String(value.regra))))
+const isFluxLoan=(value:unknown)=>isRecord(value)&&typeof value.id==='string'&&isDateKey(value.data)&&['entrada','saida','diario','economia','cartao'].includes(String(value.tipo))&&isFiniteNumber(value.valor)&&value.valor>=0&&typeof value.descricao==='string'&&(value.tag_id==null||typeof value.tag_id==='string')&&(value.tag_ids==null||Array.isArray(value.tag_ids)&&value.tag_ids.every(item=>typeof item==='string'))&&isRecurrence(value.repete)&&(value.cartao_id==null||typeof value.cartao_id==='string')&&(value.cartao==null||isRecord(value.cartao)&&(value.cartao.ajustes==null||isRecord(value.cartao.ajustes)&&Object.values(value.cartao.ajustes).every(isDateKey)))
 
 export const isFinancasData=(value:unknown):value is FinancasData=>{
   if(!isRecord(value)||value.version!==1||!isRecord(value.perfil)||!isFiniteNumber(value.perfil.saldo_inicial)||!isFiniteNumber(value.perfil.economia_mensal)||!isFiniteNumber(value.perfil.valor_diario)||!isRecord(value.tabela)||!isRecord(value.emprestimos)||!isRecord(value.flux)||!isRecord(value.config))return false
@@ -71,7 +77,7 @@ export const persistLocalBackup=(data:FinancasData,updatedAt=Date.now()):BackupR
 }
 
 export const exportBackupFile=async(data:FinancasData)=>{
-  const filename=`aurvm-backup-${new Date().toISOString().slice(0,10)}.json`
+  const filename=`aurvm-backup-${localISO(new Date())}.json`
   const payload=JSON.stringify({app:'Aurvm',exportedAt:new Date().toISOString(),data},null,2)
 
   if(Capacitor.isNativePlatform()){

@@ -1,9 +1,10 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   IconBell as Bell,
   IconCheck as Check,
   IconChevronDown as ChevronDown,
   IconChevronLeft,
+  IconPencil,
   IconSortAscendingLetters,
   IconSortDescendingNumbers,
   IconTrash,
@@ -12,10 +13,10 @@ import {
 } from '@tabler/icons-react'
 import { AurvmDatePicker } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
-import { Button, Card, DangerButton, Input, MoneyInput } from '../components/ui'
+import { Button, Card, ConfirmDialog, DangerButton, Input, MoneyInput } from '../components/ui'
 import { SunriseHero } from '../components/SunriseHero'
 import type { LancamentoPessoa, Pessoa } from '../lib/types'
-import { cn, uid } from '../lib/utils'
+import { cn, localISO, uid } from '../lib/utils'
 import { useFinancas } from '../store/use-financas'
 
 const paidGreen = '#238A5B'
@@ -34,9 +35,12 @@ export function Emprestimos() {
   }, [data.emprestimos.pessoas, mutate, personColors])
   const [active, setActive] = useState('')
   const [adding, setAdding] = useState(false)
+  const [newPersonName, setNewPersonName] = useState('')
   const [personOrder, setPersonOrder] = useState<'valor'|'nome'>('valor')
   const [personToDelete, setPersonToDelete] = useState<Pessoa|null>(null)
   const [loanToDelete, setLoanToDelete] = useState<{ person: Pessoa; loan: LancamentoPessoa }|null>(null)
+  const [personToEdit, setPersonToEdit] = useState<Pessoa|null>(null)
+  const [loanToEdit, setLoanToEdit] = useState<{ person: Pessoa; loan: LancamentoPessoa }|null>(null)
   const allLoans = data.emprestimos.pessoas.flatMap((person) => person.lancamentos)
   const pending = allLoans.filter((loan) => !loan.pago)
   const received = allLoans.filter((loan) => loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
@@ -59,6 +63,7 @@ export function Emprestimos() {
       lancamentos: [],
     }))
     setActive(id)
+    setNewPersonName('')
     setAdding(false)
   }
 
@@ -121,7 +126,7 @@ export function Emprestimos() {
 
         <section>
           <div className="space-y-[10px]">
-            {listedPeople.map(person=><PersonCard key={person.id} person={person} onRequestDelete={()=>setPersonToDelete(person)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person, loan })} />)}
+             {listedPeople.map(person=><PersonCard key={person.id} person={person} onRequestEdit={()=>setPersonToEdit(person)} onRequestDelete={()=>setPersonToDelete(person)} onRequestEditLoan={(loan)=>setLoanToEdit({ person, loan })} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person, loan })} />)}
           </div>
         </section>
 
@@ -130,14 +135,15 @@ export function Emprestimos() {
             <Input
               autoFocus
               placeholder="Nome da pessoa"
-              onBlur={(event) => addPerson(event.currentTarget.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') addPerson(event.currentTarget.value) }}
+              value={newPersonName}
+              onChange={(event) => setNewPersonName(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') addPerson(newPersonName) }}
             />
-            <p className="mt-2 text-[9px] text-t3">Pressione Enter para adicionar</p>
+            <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={()=>{setNewPersonName('');setAdding(false)}} className="h-9 rounded-[11px] px-3 text-[10px] font-semibold text-t2">Cancelar</button><Button disabled={!newPersonName.trim()} onClick={()=>addPerson(newPersonName)} className="h-9 rounded-[11px] px-3" style={{background:loanColor}}>Adicionar</Button></div>
           </Card>
         ) : (
           <div className="flex justify-end">
-            <button type="button" onClick={() => setAdding(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:loanColor,background:`color-mix(in oklch,${loanColor} 12%,transparent)`}}>+ Nova pessoa</button>
+            <button type="button" onClick={() => {setNewPersonName('');setAdding(true)}} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:loanColor,background:`color-mix(in oklch,${loanColor} 12%,transparent)`}}>+ Nova pessoa</button>
           </div>
         )}
         {personToDelete&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setPersonToDelete(null)}>
@@ -155,8 +161,10 @@ export function Emprestimos() {
             <p className="mt-4 rounded-[15px] border border-border bg-surface p-3 text-[10px] leading-relaxed text-t2">O lançamento de {loanToDelete.person.nome} no valor de <Currency value={loanToDelete.loan.valor} /> será removido. Essa ação não pode ser desfeita.</p>
             <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setLoanToDelete(null)} className="h-11 rounded-[14px] border border-border bg-surface text-[11px] font-bold text-t2">Cancelar</button><button type="button" onClick={()=>{const { person, loan } = loanToDelete;mutate(draft=>{const currentPerson=draft.emprestimos.pessoas.find(item=>item.id===person.id);if(currentPerson)currentPerson.lancamentos=currentPerson.lancamentos.filter(item=>item.id!==loan.id)});setLoanToDelete(null)}} className="h-11 rounded-[14px] bg-red text-[11px] font-bold text-white">Excluir lançamento</button></div>
           </div>
-        </div>}
-      </div>
+         </div>}
+         {personToEdit&&<PersonEditor person={personToEdit} done={()=>setPersonToEdit(null)}/>}
+         {loanToEdit&&<LoanEditor person={loanToEdit.person} loan={loanToEdit.loan} done={()=>setLoanToEdit(null)}/>}
+       </div>
       </div>
     </div>
   )
@@ -166,7 +174,7 @@ function LoanKpi({ label, value, color }: { label: string; value: ReactNode; col
   return <div className="min-w-0 rounded-[16px] bg-surface p-[13px] shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="truncate font-mono text-[8.5px] font-medium uppercase tracking-[.8px] text-t3">{label}</p><div className="mt-[7px] truncate text-[16px] font-bold" style={{color}}>{value}</div></div>
 }
 
-function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pessoa;onRequestDelete:()=>void;onRequestDeleteLoan:(loan:LancamentoPessoa)=>void }) {
+function PersonCard({ person,onRequestEdit,onRequestDelete,onRequestEditLoan,onRequestDeleteLoan }: { person: Pessoa;onRequestEdit:()=>void;onRequestDelete:()=>void;onRequestEditLoan:(loan:LancamentoPessoa)=>void;onRequestDeleteLoan:(loan:LancamentoPessoa)=>void }) {
   const mutate = useFinancas((state) => state.mutate)
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -191,7 +199,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{person.nome}</p>
-            <div className="mt-1 flex items-center gap-1.5 text-[10px] text-t2">
+            <div className="mt-1 flex min-w-0 items-center gap-1 whitespace-nowrap text-[9px] leading-none tracking-[-.1px] text-t2">
               <Currency value={pendingTotal} />
               <span>pendente</span>
               <span className="text-t3">·</span>
@@ -199,8 +207,9 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
             </div>
           </div>
         </button>
+        {open&&<button type="button" aria-label={`Editar ${person.nome}`} onClick={onRequestEdit} className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border border-border bg-surface text-t3 transition active:scale-95"><IconPencil size={14}/></button>}
         {open&&<DangerButton
-          className="mr-1 h-10 w-10 rounded-[11px]"
+          className="mr-1 h-8 w-8 rounded-[10px]"
           aria-label={`Excluir ${person.nome}`}
           onClick={onRequestDelete}
         />}
@@ -274,6 +283,7 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                     >
                       <Check size={12} strokeWidth={2.2}/>
                     </button>
+                    <button type="button" className="glass-action glass-neutral grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border transition active:scale-95" aria-label={`Editar ${loan.motivo}`} onClick={() => onRequestEditLoan(loan)}><IconPencil size={14}/></button>
                     <DangerButton className="h-9 w-9 rounded-[10px]" aria-label={`Excluir ${loan.motivo}`} onClick={() => onRequestDeleteLoan(loan)} />
                   </div>
                   {reminderLoanId===loan.id&&<LoanReminder personId={person.id} loan={loan} done={()=>setReminderLoanId(null)}/>} 
@@ -295,16 +305,67 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
   )
 }
 
+function PersonEditor({person,done}:{person:Pessoa;done:()=>void}){
+  const mutate=useFinancas(state=>state.mutate)
+  const [name,setName]=useState(person.nome)
+  const ready=useRef(false)
+  useEffect(()=>{
+    if(!ready.current){ready.current=true;return}
+    const value=name.trim()
+    if(!value)return
+    mutate(draft=>{const current=draft.emprestimos.pessoas.find(item=>item.id===person.id);if(current)current.nome=value})
+  },[name,mutate,person.id])
+  return <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55" onClick={done}>
+    <div role="dialog" aria-label={`Editar ${person.nome}`} className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
+      <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+      <div className="mb-4 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-[14px] text-white" style={{background:person.cor}}>{person.nome.slice(0,1).toUpperCase()}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-t3">Pessoa</p><h2 className="mt-0.5 truncate text-[18px] font-bold text-t1">Editar pessoa</h2></div><button type="button" aria-label="Fechar" onClick={done} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-el text-t3"><IconX size={15}/></button></div>
+      <Input autoFocus maxLength={60} aria-label="Nome da pessoa" value={name} onChange={event=>setName(event.target.value)} placeholder="Nome da pessoa" className="h-11 bg-surface"/>
+      <div className="mt-3 flex items-center justify-between gap-2"><span className="text-[9px] font-semibold text-t3">Salvo automaticamente</span><button type="button" onClick={done} className="h-11 rounded-[14px] border border-border bg-surface px-4 text-[11px] font-bold text-t2">Fechar</button></div>
+    </div>
+  </div>
+}
+
+function LoanEditor({person,loan,done}:{person:Pessoa;loan:LancamentoPessoa;done:()=>void}){
+  const mutate=useFinancas(state=>state.mutate)
+  const [motivo,setMotivo]=useState(loan.motivo)
+  const [valor,setValor]=useState(loan.valor)
+  const [date,setDate]=useState(loan.data)
+  const ready=useRef(false)
+  useEffect(()=>{
+    if(!ready.current){ready.current=true;return}
+    const value=motivo.trim()
+    if(!value||valor<=0||!date)return
+    mutate(draft=>{const current=draft.emprestimos.pessoas.find(item=>item.id===person.id)?.lancamentos.find(item=>item.id===loan.id);if(current){current.motivo=value;current.valor=valor;current.data=date}})
+  },[date,loan.id,motivo,mutate,person.id,valor])
+  return <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/55" onClick={done}>
+    <div role="dialog" aria-label={`Editar ${loan.motivo}`} className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
+      <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-border"/>
+      <div className="mb-4 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-[14px] bg-el text-t2"><IconPencil size={17}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[1px] text-t3">Lançamento de {person.nome}</p><h2 className="mt-0.5 truncate text-[18px] font-bold text-t1">Editar lançamento</h2></div><button type="button" aria-label="Fechar" onClick={done} className="grid h-9 w-9 place-items-center rounded-full border border-border bg-el text-t3"><IconX size={15}/></button></div>
+      <div className="grid grid-cols-[1.25fr_1fr] gap-2"><label className="min-w-0"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Motivo</span><Input aria-label="Motivo do lançamento" value={motivo} onChange={event=>setMotivo(event.target.value)} className="h-10 rounded-[11px] bg-surface px-3 text-xs font-semibold"/></label><label className="min-w-0"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Valor</span><MoneyInput aria-label="Valor do lançamento" value={valor} onValueChange={setValor} className="h-10 rounded-[11px] bg-surface px-2.5 text-xs font-bold" inputClassName="text-right" style={{color:loanColor}}/></label></div>
+      <label className="mt-3 block"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Data</span><AurvmDatePicker value={date} onChange={setDate} accentColor={loanColor} className="h-10 w-full justify-between bg-surface px-3"/></label>
+      <div className="mt-3 flex items-center justify-between gap-2"><span className="text-[9px] font-semibold text-t3">Salvo automaticamente</span><button type="button" onClick={done} className="h-11 rounded-[14px] border border-border bg-surface px-4 text-[11px] font-bold text-t2">Fechar</button></div>
+    </div>
+  </div>
+}
+
 function LoanReminder({personId,loan,done}:{personId:string;loan:LancamentoPessoa;done:()=>void}){
   const mutate=useFinancas(state=>state.mutate)
-  const [date,setDate]=useState(loan.lembrete?.data??new Date().toISOString().slice(0,10))
+  const [date,setDate]=useState(loan.lembrete?.data??localISO(new Date()))
   const [note,setNote]=useState(loan.lembrete?.observacao??'')
+  const [removeConfirming,setRemoveConfirming]=useState(false)
+  const ready=useRef(false)
   const update=(reminder:LancamentoPessoa['lembrete'])=>mutate(draft=>{const current=draft.emprestimos.pessoas.find(person=>person.id===personId)?.lancamentos.find(item=>item.id===loan.id);if(current)current.lembrete=reminder})
+  useEffect(()=>{
+    if(!loan.lembrete){ready.current=true;return}
+    if(!ready.current){ready.current=true;return}
+    if(date)update({data:date,observacao:note.trim()})
+  },[date,note])
   return <div className="mt-3 rounded-[13px] border border-yellow/20 bg-surface p-3 shadow-[0_6px_18px_rgba(70,40,24,.04)]">
     <div className="mb-2 flex items-center gap-2 text-t2"><span className="grid h-7 w-7 place-items-center rounded-[9px] bg-el"><Bell size={13}/></span><div><p className="text-[10px] font-bold text-t1">Lembrete de cobrança</p><p className="text-[8px] text-t3">Defina quando deseja lembrar.</p></div></div>
     <AurvmDatePicker value={date} onChange={setDate} accentColor="var(--t2)" className="h-9 w-full justify-between bg-el/50 px-3"/>
     <Input aria-label="Observação do lembrete" placeholder="Observação opcional" value={note} onChange={event=>setNote(event.target.value)} className="mt-2 h-9 bg-el/50 text-xs"/>
-    <div className="mt-2 flex items-center justify-end gap-2">{loan.lembrete&&<DangerButton aria-label="Remover lembrete" title="Remover lembrete" onClick={()=>{update(null);done()}}/>}<button onClick={done} className="h-8 rounded-[10px] px-2.5 text-[9px] font-semibold text-t2 transition active:scale-95">Cancelar</button><Button disabled={!date} onClick={()=>{update({data:date,observacao:note.trim()});done()}} className="h-8 rounded-[10px] bg-accent px-3 text-[9px]">Salvar lembrete</Button></div>
+    <div className="mt-2 flex items-center justify-end gap-2">{loan.lembrete&&<DangerButton aria-label="Remover lembrete" title="Remover lembrete" onClick={()=>setRemoveConfirming(true)}/>}<button onClick={done} className="h-8 rounded-[10px] px-2.5 text-[9px] font-semibold text-t2 transition active:scale-95">{loan.lembrete?'Fechar':'Cancelar'}</button>{loan.lembrete?<span className="text-[9px] font-semibold text-t3">Salvo automaticamente</span>:<Button disabled={!date} onClick={()=>{update({data:date,observacao:note.trim()});done()}} className="h-8 rounded-[10px] bg-accent px-3 text-[9px]">Salvar lembrete</Button>}</div>
+    {removeConfirming&&<ConfirmDialog title="Remover lembrete?" message="Este lembrete será removido do lançamento. Essa ação não pode ser desfeita." confirmLabel="Remover lembrete" onConfirm={()=>{update(null);setRemoveConfirming(false);done()}} onCancel={()=>setRemoveConfirming(false)}/>}
   </div>
 }
 
@@ -320,12 +381,12 @@ function NewLoan({ personId, done }: { personId: string; done: () => void }) {
         <div className="min-w-0"><span className="mb-1.5 block font-mono text-[8.5px] font-bold uppercase tracking-[.8px] text-t3">Valor</span><MoneyInput aria-label="Valor do lançamento" value={valor} onValueChange={setValor} className="h-10 rounded-[11px] bg-bg px-2.5 text-xs font-bold" inputClassName="text-right" style={{color:loanColor}} /></div>
       </div>
       <Button
-        disabled={!motivo || !valor}
+        disabled={!motivo.trim() || valor<=0}
         onClick={() => {
           mutate((draft) => draft.emprestimos.pessoas.find((person) => person.id === personId)?.lancamentos.push({
             id: uid(),
-            data: new Date().toISOString().slice(0, 10),
-            motivo,
+            data: localISO(new Date()),
+            motivo: motivo.trim(),
             valor,
             pago: false,
           }))

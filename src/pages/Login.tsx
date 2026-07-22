@@ -15,14 +15,27 @@ function GoogleWord(){
   return <span aria-label="Google" className="font-display font-semibold tracking-[-.35px]"><span className="text-[#4285F4]">G</span><span className="text-[#EA4335]">o</span><span className="text-[#FBBC05]">o</span><span className="text-[#4285F4]">g</span><span className="text-[#34A853]">l</span><span className="text-[#EA4335]">e</span></span>
 }
 
-function LoginTexture(){
-  const rows=14
-  const columns=13
-  return <div className="login-dots" aria-hidden="true">{Array.from({length:rows},(_,row)=>{
-    const progress=row/(rows-1)
-    const size=16-(progress*13)
-    return <div className="login-dot-row" key={row} style={{top:`${4+row*6.4}%`,opacity:.5-(progress*.28)}}>{Array.from({length:columns},(_,column)=><i key={column} style={{width:`${size}px`,height:`${size}px`,borderRadius:`${Math.max(1.2,size*.22)}px`}}/>)}</div>
-  })}</div>
+function LoginAtmosphere(){
+  return <div className="login-atmosphere" aria-hidden="true">
+    <span className="login-atmosphere-halo login-atmosphere-halo-one" />
+    <span className="login-atmosphere-halo login-atmosphere-halo-two" />
+    <span className="login-atmosphere-ring login-atmosphere-ring-one" />
+    <span className="login-atmosphere-streak login-atmosphere-streak-one" />
+    <span className="login-atmosphere-streak login-atmosphere-streak-two" />
+    <svg className="login-atmosphere-crystal" viewBox="0 0 64 64" fill="none">
+      <defs>
+        <linearGradient id="login-crystal-frost" x1="20" y1="10" x2="45" y2="54" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFFFFF" stopOpacity=".96" />
+          <stop offset=".5" stopColor="#F5FCFF" stopOpacity=".72" />
+          <stop offset="1" stopColor="#D8F1FC" stopOpacity=".4" />
+        </linearGradient>
+      </defs>
+      <path d="M32 10 46 23.5 41.5 46 32 54 22.5 46 18 23.5 32 10Z" fill="url(#login-crystal-frost)" />
+      <path d="M32 10 40.5 23.5 32 31.5 23.5 23.5 32 10Z" fill="#FFFFFF" fillOpacity=".42" />
+      <path d="m18 23.5 14 8 14-8M32 31.5V54M23.5 23.5 32 31.5l8.5-8M22.5 46 32 31.5 41.5 46" stroke="#FFFFFF" strokeOpacity=".78" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M32 14.5v11M26.8 21.2l5.2 4.3 5.2-4.3" stroke="#FFFFFF" strokeOpacity=".58" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  </div>
 }
 
 export function Login(){
@@ -32,10 +45,10 @@ export function Login(){
   const signIn=async()=>{setLoading(true);setError('');try{await connect()}catch(cause){setError(cause instanceof Error?cause.message:'Não foi possível entrar com o Google.')}finally{setLoading(false)}}
   return <div className="page flex h-full flex-col bg-bg px-4 pb-6 pt-1">
     <div className="login-sunrise login-sunrise-shadow relative min-h-0 flex-1 overflow-hidden rounded-[30px] border border-border">
-      <LoginTexture/>
+      <LoginAtmosphere/>
       <div className="absolute inset-x-5 bottom-5 flex items-center gap-2.5">
         <img src="/aurvm-icon.svg" alt="Ícone Aurvm" className="h-10 w-10 rounded-[12px] shadow-[0_7px_22px_rgba(17,17,22,.25)]"/>
-        <span className="text-[11px] font-bold uppercase tracking-[2.5px] text-[#6F4B3D]/85">Aurvm</span>
+        <span className="text-[11px] font-bold uppercase tracking-[2.5px] text-[#244C70]/80">Aurvm</span>
       </div>
     </div>
     <section className="px-2 pb-6 pt-6">

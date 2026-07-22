@@ -63,7 +63,7 @@ const economiaOccurrencesInMonth = (item: Economia, key: string, index: number) 
 
 const isEconomiaInMonth = (item: Economia, key: string, index: number) => economiaOccurrencesInMonth(item, key, index) > 0
 
-export const quintoDiaUtil=(d:Date)=>{const total=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();let uteis=0;for(let day=1;day<=total;day++){const wd=new Date(d.getFullYear(),d.getMonth(),day).getDay();if(wd!==0){uteis++;if(uteis===5)return day}}return 0}
+export const quintoDiaUtil=(d:Date)=>{const total=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();let uteis=0;for(let day=1;day<=total;day++){const wd=new Date(d.getFullYear(),d.getMonth(),day).getDay();if(wd!==0&&wd!==6){uteis++;if(uteis===5)return day}}return 0}
 const monthDiff = (l: FluxLancamento, year: number, month: number) => {
   const [ly, lm] = l.data.split('-').map(Number)
   return (year - ly) * 12 + (month - lm)
@@ -113,9 +113,9 @@ export const ocorreNoMes = (l: FluxLancamento, key: string) => {
 export const fluxMeta: Record<FluxTipo, { label: string; icon: string; color: string }> = {
   entrada: { label: 'Entradas', icon: '↙', color: 'oklch(0.66 0.10 165)' },
   saida: { label: 'Saídas', icon: '↗', color: 'oklch(0.64 0.12 30)' },
-  diario: { label: 'Diários', icon: 'D', color: 'oklch(0.65 0.11 305)' },
+  diario: { label: 'Diários', icon: 'D', color: 'oklch(0.72 0.12 70)' },
   economia: { label: 'Economia', icon: 'E', color: 'oklch(0.73 0.09 195)' },
-  cartao: { label: 'Cartão', icon: 'C', color: 'oklch(0.58 0.10 280)' },
+  cartao: { label: 'Cartão', icon: 'C', color: 'oklch(0.60 0.11 245)' },
 }
 
 // Escala de temperatura da planilha de saldos — 7 faixas com as cores da planilha do usuário (Google Sheets).

@@ -68,6 +68,7 @@ const normalizeData=(source:FinancasData)=>{
   return data
 }
 const initialData=normalizeData(initialBackup?.data??seedData)
+void syncReminders(initialData)
 
 export const useFinancas = create<Store>((set, get) => {
   const scheduleSync=(delay=450)=>{
