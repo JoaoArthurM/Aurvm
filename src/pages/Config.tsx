@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import {
-  IconBell, IconBellRinging, IconChevronLeft, IconChevronRight, IconDownload, IconEyeCheck, IconGripVertical,
-  IconEyeOff, IconHome, IconInfoCircle, IconLayoutNavbar, IconLogout, IconMoon, IconPalette,
+  IconBellRinging, IconChevronLeft, IconChevronRight, IconDownload, IconEyeCheck, IconGripVertical,
+  IconEyeOff, IconHome, IconLayoutNavbar, IconLogout, IconMoon,
   IconPigMoney, IconRefresh, IconReportMoney, IconShieldCheck, IconSun, IconTableColumn,
   IconUpload, IconUser, IconUserDollar,
 } from '@tabler/icons-react'
@@ -104,9 +104,10 @@ export function Config(){
       <div />
     </div>
 
-    <div className="space-y-5 px-4">
-      <ConfigSection icon={<GoogleDriveMark className="h-4 w-[18px]"/>} title="Conta e dados">
-        <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
+    <div className="overflow-hidden px-5 pb-[30px]">
+      <div className="space-y-4">
+      <ConfigSection title="Conta e dados" color="#238A5B">
+        <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
           <div className="flex items-center px-4 py-4">
             <div className={cn('mr-3 grid h-11 w-11 place-items-center rounded-[14px]',connected?'bg-green/10':'bg-el')}>
               {busy?<IconRefresh size={18} className="animate-spin text-accent"/>:<GoogleDriveMark className="h-6 w-7"/>} 
@@ -138,8 +139,8 @@ export function Config(){
         </Card>
       </ConfigSection>
 
-      <ConfigSection icon={<IconPalette size={15}/>} title="Aparência">
-        <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
+      <ConfigSection title="Aparência" color="#B88624">
+        <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
           <SettingRow icon={data.config.tema==='light'?<IconSun size={16} className="text-[#B88624]"/>:<IconMoon size={16} className="text-[#8A78B5]"/>} label="Tema" caption="Interface do aplicativo">
             <div className="theme-segment flex h-[34px] items-center rounded-[12px] border p-[3px] text-[9px] font-semibold">
               <button onClick={()=>setTheme('light')} className={cn('flex h-[26px] items-center gap-1 rounded-[9px] px-2.5 transition',data.config.tema==='light'?'theme-segment-active theme-light-active':'theme-segment-inactive')}><IconSun size={12} stroke={1.8}/>Claro</button>
@@ -150,8 +151,8 @@ export function Config(){
         </Card>
       </ConfigSection>
 
-      <ConfigSection icon={<IconLayoutNavbar size={15}/>} title="Organização">
-        <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
+      <ConfigSection title="Organização" color="var(--accent)">
+        <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
           <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><IconHome size={16}/></span>
             <div className="min-w-0 flex-1"><p className="text-[12px] font-semibold text-t1">Tela padrão</p><p className="mt-0.5 text-[9px] text-t3">Abre primeiro ao entrar no Aurvm</p></div>
@@ -172,26 +173,27 @@ export function Config(){
         </Card>
       </ConfigSection>
 
-      <ConfigSection icon={<IconBell size={15}/>} title="Notificações">
-        <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
+      <ConfigSection title="Notificações" color="#8A78B5">
+        <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
           <SettingRow icon={<IconBellRinging size={16}/>} label="Lembretes de cobranças e dívidas" caption={reminderCount?`${reminderCount} ${reminderCount===1?'lembrete cadastrado':'lembretes cadastrados'}`:'Nenhum lembrete cadastrado'}><Toggle checked={data.config.lembrete_mensal} onChange={()=>mutate(d=>{d.config.lembrete_mensal=!d.config.lembrete_mensal})}/></SettingRow>
         </Card>
       </ConfigSection>
 
-      <ConfigSection icon={<IconInfoCircle size={15}/>} title="Sobre">
-        <Card className="overflow-hidden shadow-[0_10px_28px_rgba(55,35,20,.045)]">
+      <ConfigSection title="Sobre" color="var(--t2)">
+        <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
           <SettingRow icon={<img src="/aurvm-icon.svg" alt="Logo do Aurvm" className="h-8 w-8 rounded-[10px] shadow-[0_5px_14px_rgba(17,17,22,.18)]"/>} label="Aurvm" caption="Gestão financeira pessoal"><span className="font-mono text-[9px] text-t3">v0.1.0</span></SettingRow>
           <SettingRow icon={<IconUser size={17}/>} label="Desenvolvedor" caption="Arthur Macedo"><IconChevronRight size={14} className="text-t3"/></SettingRow>
         </Card>
       </ConfigSection>
 
-      <Button onClick={logout} className="h-12 w-full border border-red bg-surface text-red shadow-[0_10px_28px_rgba(55,35,20,.045)]"><IconLogout size={16}/>Sair da conta</Button>
+      <Button onClick={logout} className="h-11 w-full rounded-[14px] border border-red/40 bg-surface text-[11px] text-red shadow-[0_2px_10px_rgba(15,37,64,.05)]"><IconLogout size={16}/>Sair da conta</Button>
+      </div>
     </div>
   </div>{pendingImport&&<ConfirmDialog title="Restaurar este backup?" message="A restauração substituirá todos os dados atuais deste aparelho. Exporte um backup atual antes de continuar, se precisar preservá-los." confirmLabel="Restaurar backup" onConfirm={applyImport} onCancel={()=>setPendingImport(null)}/>}</>
 }
 
-function ConfigSection({icon,title,children}:{icon:ReactNode;title:string;children:ReactNode}){
-  return <section><div className="mb-2.5 flex items-center gap-2 text-accent"><span className="grid h-7 w-7 place-items-center rounded-lg bg-accent/10">{icon}</span><h2 className="font-display text-[11px] font-semibold uppercase tracking-[.12em] text-t2">{title}</h2></div>{children}</section>
+function ConfigSection({title,color,children}:{title:string;color:string;children:ReactNode}){
+  return <section><div className="mx-1 flex items-center gap-2 pb-2.5 pt-1"><span className="h-2 w-2 shrink-0 rounded-[2px]" style={{background:color}}/><h2 className="text-[14px] font-bold text-t1">{title}</h2></div>{children}</section>
 }
 
 function SettingRow({icon,label,caption,children}:{icon:ReactNode;label:string;caption:string;children:ReactNode}){

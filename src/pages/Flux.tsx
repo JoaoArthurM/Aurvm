@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   IconCalendarStats as CalendarRange, IconCashBanknoteMinus, IconCashBanknotePlus,
-  IconAdjustmentsDollar, IconArrowBadgeLeft, IconArrowBadgeRight, IconCalendar, IconCalendarMonth, IconCheck, IconChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCreditCard, IconPencil,
+  IconAdjustmentsDollar, IconCalendar, IconCalendarMonth, IconCheck, IconChevronDown, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight, IconCreditCard, IconPencil,
   IconEye, IconEyeOff, IconPigMoney, IconPlus as Plus, IconReceiptDollar, IconRepeat, IconSearch as Search,
   IconSortAscendingLetters, IconSortDescendingNumbers, IconStarFilled, IconTag, IconTrash, IconX as X,
 } from '@tabler/icons-react'
-import { AddButton, Button, Card, ConfirmDialog, DangerButton, Input, MoneyInput } from '../components/ui'
+import { Button, Card, ConfirmDialog, DangerButton, Input, MoneyInput } from '../components/ui'
 import { AurvmDatePicker, AurvmSelect } from '../components/AurvmControls'
 import { Currency } from '../components/Currency'
 import { cn, fluxMeta, getLimites, money, monthKey, ocorreEm, ocorreNoMes, quintoDiaUtil, recurrenceOccurrenceIndex, saldoStyle, tempTiers, uid } from '../lib/utils'
@@ -42,12 +42,19 @@ const isFifthBusinessDay=(value:string)=>{const [year,month,day]=value.split('-'
 
 type FluxTab='saldos'|'totais'|'tags'|'menu'
 export function Flux(){
- const {data,mutate}=useFinancas(); const [monthOffset,setMonthOffset]=useState(0); const tab=data.config.preferencias?.flux_aba??'saldos';const [horizon,setHorizon]=useState(false);const [adding,setAdding]=useState(false);const [editing,setEditing]=useState<{item:FluxLancamento;occurrenceDate:string}|null>(null);const [saldosFocusRequest,setSaldosFocusRequest]=useState(0)
+ const {data,mutate,setTab:navigateTo}=useFinancas(); const [monthOffset,setMonthOffset]=useState(0); const tab=data.config.preferencias?.flux_aba??'saldos';const [horizon,setHorizon]=useState(false);const [adding,setAdding]=useState(false);const [editing,setEditing]=useState<{item:FluxLancamento;occurrenceDate:string}|null>(null);const [saldosFocusRequest,setSaldosFocusRequest]=useState(0)
  const setTab=(value:FluxTab)=>mutate(d=>{d.config.preferencias??={};d.config.preferencias.flux_aba=value})
  const today=new Date();const base=new Date(today.getFullYear(),today.getMonth()+monthOffset,1);const key=monthKey(base);const label=new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit'}).format(base).replace('.','')
-  return <div className="page min-h-full bg-bg"><header className="px-5 pt-[14px]"><p className="mb-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-accent">Fluxo diário</p><div className="flex items-center justify-between gap-2"><h1 className="min-w-0 font-display text-[26px] font-semibold leading-none tracking-[-1.2px] text-t1">{label}</h1><div className="flex shrink-0 items-center gap-1"><button aria-label="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeLeft size={18}/></button><button aria-label="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconArrowBadgeRight size={18}/></button><button aria-label="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-9 items-center gap-1 rounded-full border px-2.5 text-[9px] font-bold transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={14}/>Hoje</button><button aria-label="Horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><IconCalendarMonth size={17}/></button><button aria-label="Nova movimentação" onClick={()=>{setEditing(null);setAdding(true)}} className="glass-action glass-accent grid h-9 w-9 place-items-center rounded-full border transition active:scale-95"><Plus size={17} strokeWidth={2.4}/></button></div></div></header>
- <div className="flux-tabs-sticky sticky z-20 grid grid-cols-4 border-b border-border">{(['saldos','totais','tags','menu'] as FluxTab[]).map(x=><button onClick={()=>{setTab(x);if(x==='saldos')setSaldosFocusRequest(value=>value+1)}} key={x} className={cn('border-b-2 border-transparent py-[10px] text-xs font-semibold capitalize text-t3 transition',tab===x&&'border-flux text-flux')}>{x}</button>)}</div>
-  <div className={cn(tab!=='saldos'&&'px-4 pt-4')}>{tab==='saldos'&&<Saldos month={base} focusRequest={saldosFocusRequest} onEdit={(item,occurrenceDate)=>setEditing({item,occurrenceDate})}/>} {tab==='totais'&&<Totais monthKey={key}/>} {tab==='tags'&&<Tags monthKey={key}/>} {tab==='menu'&&<FluxMenu/>}</div>
+  return <div className="page min-h-full bg-bg"><header className="px-[22px] pb-3 pt-0.5">
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+      <button type="button" aria-label="Voltar para o início" onClick={()=>navigateTo('inicio')} className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-surface text-t2 shadow-[0_2px_8px_rgba(15,37,64,.07)]"><ChevronLeft size={20}/></button>
+      <div className="text-center"><p className="font-mono text-[9.5px] font-bold uppercase tracking-[2px] text-flux">Fluxo diário</p><h1 className="mt-1 font-display text-[16px] font-bold leading-none tracking-[-.35px] text-t1">{label}</h1></div>
+      <button type="button" aria-label="Nova movimentação" onClick={()=>{setEditing(null);setAdding(true)}} className="glass-action glass-accent grid h-9 w-9 place-items-center justify-self-end rounded-[12px] border transition active:scale-95"><Plus size={17} strokeWidth={2.4}/></button>
+    </div>
+    <div className="mt-3 flex items-center justify-center gap-1.5"><button aria-label="Mês anterior" onClick={()=>setMonthOffset(x=>x-1)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><ChevronLeft size={16} strokeWidth={2.2}/></button><button aria-label="Próximo mês" onClick={()=>setMonthOffset(x=>x+1)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><ChevronRight size={16} strokeWidth={2.2}/></button><button aria-label="Ir para o mês atual" disabled={monthOffset===0} onClick={()=>setMonthOffset(0)} className={cn('glass-action inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[9px] font-bold transition active:scale-95 disabled:opacity-40',monthOffset===0?'glass-accent':'glass-neutral')}><IconCalendar size={13}/>Hoje</button><button aria-label="Horizonte de saldos" onClick={()=>setHorizon(true)} className="glass-action glass-neutral grid h-8 w-8 place-items-center rounded-full border transition active:scale-95"><IconCalendarMonth size={16}/></button></div>
+  </header>
+ <div className="flux-tabs-sticky sticky top-0 z-20 mx-5 grid h-[56px] grid-cols-4 items-center gap-1 rounded-[14px] border border-border bg-el p-1 shadow-[0_8px_18px_rgba(15,37,64,.08)]">{(['saldos','totais','tags','menu'] as FluxTab[]).map(x=><button type="button" onClick={()=>{setTab(x);if(x==='saldos')setSaldosFocusRequest(value=>value+1)}} key={x} className={cn('flex h-[46px] items-center justify-center rounded-[14px] border border-transparent text-[11px] font-semibold capitalize text-t3 transition active:scale-[.98]',tab===x&&'border-border/40 bg-surface text-flux shadow-[0_1px_5px_rgba(15,37,64,.09)]')}>{x}</button>)}</div>
+  <div className={cn(tab!=='saldos'&&'px-5 pt-4')}>{tab==='saldos'&&<Saldos month={base} focusRequest={saldosFocusRequest} onEdit={(item,occurrenceDate)=>setEditing({item,occurrenceDate})}/>} {tab==='totais'&&<Totais monthKey={key}/>} {tab==='tags'&&<Tags monthKey={key}/>} {tab==='menu'&&<FluxMenu/>}</div>
   {horizon&&<Horizon close={()=>setHorizon(false)}/>} {(adding||editing)&&<NewTransaction edit={editing?.item??null} occurrenceDate={editing?.occurrenceDate} close={()=>{setAdding(false);setEditing(null)}}/>}</div>
 }
 
@@ -268,7 +275,7 @@ function Saldos({month,focusRequest,onEdit}:{month:Date;focusRequest:number;onEd
 }
 
 function ChainIcon({tipo,dashed}:{tipo:FluxTipo;dashed?:boolean}){return <span className={cn('grid h-5 w-5 shrink-0 place-items-center rounded-full',dashed&&'border border-dashed')} style={{color:fluxMeta[tipo].color,background:dashed?'transparent':`${fluxMeta[tipo].color}18`,borderColor:dashed?fluxMeta[tipo].color:undefined}}><FluxTypeIcon tipo={tipo} size={11}/></span>}
-function TotalsCardHeader({title,caption,icon}:{title:string;caption:string;icon:ReactNode}){return <div className="flex items-center gap-3 border-b border-border bg-el/25 px-4 py-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-surface text-flux shadow-sm">{icon}</span><span className="min-w-0"><span className="block text-[11px] font-bold text-t1">{title}</span><span className="mt-0.5 block text-[9px] text-t3">{caption}</span></span></div>}
+function TotalsCardHeader({title,caption,icon}:{title:string;caption:string;icon:ReactNode}){return <div className="flex items-center gap-3 border-b border-border/60 bg-el/20 px-4 py-3.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] bg-surface text-flux shadow-[0_2px_7px_rgba(15,37,64,.06)]">{icon}</span><span className="min-w-0"><span className="block text-[12px] font-bold text-t1">{title}</span><span className="mt-0.5 block text-[9px] text-t3">{caption}</span></span></div>}
 
 function Totais({monthKey:key}:{monthKey:string}){
  const data=useFinancas(s=>s.data)
@@ -280,8 +287,8 @@ function Totais({monthKey:key}:{monthKey:string}){
  const daysPassed=Math.max(1,currentMonth?today.getDate():totalDays);const remaining=Math.max(0,totalDays-daysPassed);const mediaDiaria=diario/daysPassed;const planejado=data.flux.valor_diario_planejado
  const positive=perf>=0;const resultColor=positive?'var(--green)':'var(--red)';const rawMonthName=new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(Number(key.slice(0,4)),Number(key.slice(5,7))-1,1));const monthName=rawMonthName.charAt(0).toUpperCase()+rawMonthName.slice(1)
  const movementRows=(Object.keys(fluxMeta) as FluxTipo[]).map(type=>({type,value:sums(type)}))
- return <div className="space-y-3">
-  <section className="overflow-hidden rounded-[24px] border p-4 shadow-[0_12px_30px_rgba(70,40,24,.07)]" style={{borderColor:`color-mix(in srgb, ${resultColor} 18%, var(--border))`,background:`linear-gradient(145deg,color-mix(in srgb, ${resultColor} 12%, var(--surface)),var(--surface) 72%)`}}>
+ return <div className="space-y-4 pb-[30px]">
+  <section className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_8px_24px_rgba(15,37,64,.07)]" style={{background:`linear-gradient(145deg,color-mix(in srgb, ${resultColor} 12%, var(--surface)),var(--surface) 72%)`}}>
    <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2.5"><span className="grid h-10 w-10 place-items-center rounded-[13px] text-white" style={{background:resultColor}}><CalendarRange size={18}/></span><div><p className="text-[9px] font-extrabold uppercase tracking-[1px]" style={{color:resultColor}}>Resultado do mês</p><p className="mt-0.5 text-[11px] font-semibold text-t2">{monthName}</p></div></div><span className="rounded-full border border-border bg-surface/80 px-2.5 py-1 text-[8px] font-bold text-t3">{tx.length} movimentações</span></div>
    <div className="mt-4"><Currency value={perf} className="text-[32px] font-black tracking-[-1.4px]" style={{color:resultColor}}/><p className="mt-1 text-[10px] text-t2">{positive?'valor disponível depois de todos os compromissos':'valor que ultrapassou as entradas do mês'}</p></div>
    <div className="mt-4 grid grid-cols-3 border-t pt-3" style={{borderColor:`color-mix(in srgb, ${resultColor} 16%, var(--border))`}}>
@@ -291,11 +298,11 @@ function Totais({monthKey:key}:{monthKey:string}){
    </div>
   </section>
 
-  <Card className="overflow-hidden rounded-[20px]"><TotalsCardHeader title="Composição do mês" caption="Quanto cada categoria movimentou" icon={<IconCashBanknoteMinus size={17}/>}/><div className="grid grid-cols-2 gap-2 p-3">{movementRows.map(({type,value},index)=><div key={type} className={cn('rounded-[15px] border border-border bg-el/25 p-3',index===movementRows.length-1&&'col-span-2')}><div className="flex items-center justify-between gap-2"><span className="grid h-8 w-8 place-items-center rounded-[10px]" style={{color:fluxMeta[type].color,background:`${fluxMeta[type].color}14`}}><FluxTypeIcon tipo={type} size={14}/></span><Currency value={value} className="text-[12px] font-bold" style={{color:fluxMeta[type].color}}/></div><p className="mt-2 text-[10px] font-semibold text-t2">{fluxMeta[type].label}</p></div>)}</div></Card>
+  <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><TotalsCardHeader title="Composição do mês" caption="Quanto cada categoria movimentou" icon={<IconCashBanknoteMinus size={17}/>}/><div className="grid grid-cols-2 gap-2 p-3">{movementRows.map(({type,value},index)=><div key={type} className={cn('rounded-[14px] border border-border bg-el/35 p-3',index===movementRows.length-1&&'col-span-2')}><div className="flex items-center justify-between gap-2"><span className="grid h-8 w-8 place-items-center rounded-[10px]" style={{color:fluxMeta[type].color,background:`${fluxMeta[type].color}14`}}><FluxTypeIcon tipo={type} size={14}/></span><Currency value={value} className="text-[12px] font-bold" style={{color:fluxMeta[type].color}}/></div><p className="mt-2 text-[10px] font-semibold text-t2">{fluxMeta[type].label}</p></div>)}</div></Card>
 
-  <Card className="overflow-hidden rounded-[20px]"><TotalsCardHeader title="Indicadores" caption="Leitura rápida da saúde do mês" icon={<IconPigMoney size={17}/>}/><div className="grid grid-cols-2 gap-px bg-border"><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="economia"/><span className="text-[9px] font-bold text-t3">Meta de economia</span></div><div className="mt-2 flex items-end justify-between gap-2"><Currency value={economia} className="text-[20px] font-bold text-green"/><span className="number mb-0.5 rounded-full bg-green/10 px-2 py-1 text-[8px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-el"><i className="block h-full rounded-full bg-green" style={{width:`${Math.min(100,rate)}%`}}/></div><p className="mt-2 text-[8px] text-t3">{rate>=20?'acima do ideal':'ideal sugerido: 20%'}</p></div><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="diario"/><span className="text-[9px] font-bold text-t3">Controle diário</span></div><Currency value={mediaDiaria} className="mt-2 text-[20px] font-bold text-t1"/><p className="mt-2 text-[8px] text-t3">planejado <Currency value={planejado} className="font-bold"/></p><span className={cn('mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-bold',mediaDiaria<=planejado?'bg-green/10 text-green':'bg-red/10 text-red')}>{mediaDiaria<=planejado?'dentro do plano':'acima do plano'}</span></div></div></Card>
+  <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><TotalsCardHeader title="Indicadores" caption="Leitura rápida da saúde do mês" icon={<IconPigMoney size={17}/>}/><div className="grid grid-cols-2 gap-px bg-border"><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="economia"/><span className="text-[9px] font-bold text-t3">Meta de economia</span></div><div className="mt-2 flex items-end justify-between gap-2"><Currency value={economia} className="text-[20px] font-bold text-green"/><span className="number mb-0.5 rounded-full bg-green/10 px-2 py-1 text-[8px] font-bold text-green">{rate.toFixed(1).replace('.',',')}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-el"><i className="block h-full rounded-full bg-green" style={{width:`${Math.min(100,rate)}%`}}/></div><p className="mt-2 text-[8px] text-t3">{rate>=20?'acima do ideal':'ideal sugerido: 20%'}</p></div><div className="bg-surface p-4"><div className="flex items-center gap-1.5"><ChainIcon tipo="diario"/><span className="text-[9px] font-bold text-t3">Controle diário</span></div><Currency value={mediaDiaria} className="mt-2 text-[20px] font-bold text-t1"/><p className="mt-2 text-[8px] text-t3">planejado <Currency value={planejado} className="font-bold"/></p><span className={cn('mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-bold',mediaDiaria<=planejado?'bg-green/10 text-green':'bg-red/10 text-red')}>{mediaDiaria<=planejado?'dentro do plano':'acima do plano'}</span></div></div></Card>
 
-  <section className="rounded-[20px] border border-dashed p-4" style={{borderColor:`color-mix(in srgb, ${fluxMeta.diario.color} 36%, var(--border))`,background:`color-mix(in srgb, ${fluxMeta.diario.color} 6%, var(--surface))`}}><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><IconReceiptDollar size={18}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[.8px]" style={{color:fluxMeta.diario.color}}>Projeção até o fim do mês</p><p className="mt-1 text-[10px] text-t2">{remaining} {remaining===1?'dia restante':'dias restantes'} no valor planejado</p></div><Currency value={remaining*planejado} className="text-[14px] font-bold" style={{color:fluxMeta.diario.color}}/></div><div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3"><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">Pelo planejamento</p><Currency value={remaining*planejado} className="mt-1 text-[11px] font-bold text-t1"/></div><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">No ritmo atual</p><Currency value={mediaDiaria*remaining} className="mt-1 text-[11px] font-bold" style={{color:mediaDiaria<=planejado?'var(--green)':'var(--red)'}}/></div></div></section>
+  <section className="rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]" style={{background:`color-mix(in srgb, ${fluxMeta.diario.color} 6%, var(--surface))`}}><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px]" style={{color:fluxMeta.diario.color,background:`${fluxMeta.diario.color}14`}}><IconReceiptDollar size={18}/></span><div className="min-w-0 flex-1"><p className="text-[9px] font-extrabold uppercase tracking-[.8px]" style={{color:fluxMeta.diario.color}}>Projeção até o fim do mês</p><p className="mt-1 text-[10px] text-t2">{remaining} {remaining===1?'dia restante':'dias restantes'} no valor planejado</p></div><Currency value={remaining*planejado} className="text-[14px] font-bold" style={{color:fluxMeta.diario.color}}/></div><div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-3"><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">Pelo planejamento</p><Currency value={remaining*planejado} className="mt-1 text-[11px] font-bold text-t1"/></div><div className="rounded-[12px] bg-surface/70 p-2.5"><p className="text-[8px] text-t3">No ritmo atual</p><Currency value={mediaDiaria*remaining} className="mt-1 text-[11px] font-bold" style={{color:mediaDiaria<=planejado?'var(--green)':'var(--red)'}}/></div></div></section>
  </div>
 }
 
@@ -329,26 +336,26 @@ function Tags({monthKey:key}:{monthKey:string}){
   })
   setDeleteId(null)
  }
- const TagRow=({tag,total,hiddenRow}:{tag:typeof data.flux.tags[number];total:number;hiddenRow?:boolean})=><div className={cn('flex items-center border-b border-border px-4 py-3.5 last:border-0',hiddenRow&&'opacity-60')}>
-  <span className="mr-3 grid h-9 w-9 place-items-center rounded-xl" style={{color:tag.cor,background:`${tag.cor}18`}}><IconTag size={16}/></span>
-  <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{tag.label}</p><p className="mt-1 text-[9px] text-t3">Total do mês</p></div>
-  <Currency value={total} className="text-xs font-bold" style={{color:tag.cor}}/>
-  <button aria-label={tag.oculta?`Mostrar ${tag.label}`:`Ocultar ${tag.label}`} onClick={()=>toggleHide(tag.id)} className="ml-2.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border bg-el/60 text-t3 transition active:scale-95">{tag.oculta?<IconEye size={13}/>:<IconEyeOff size={13}/>}</button>
-  <DangerButton aria-label={`Excluir tag ${tag.label}`} onClick={()=>setDeleteId(tag.id)} className="ml-1.5 h-7 w-7"/>
+ const TagRow=({tag,total,hiddenRow}:{tag:typeof data.flux.tags[number];total:number;hiddenRow?:boolean})=><div className={cn('flex items-center gap-2.5 border-b border-border/60 px-3.5 py-3.5 last:border-0',hiddenRow&&'opacity-60')}>
+  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px]" style={{color:tag.cor,background:`${tag.cor}18`}}><IconTag size={17}/></span>
+  <div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-t1">{tag.label}</p><p className="mt-0.5 text-[9px] text-t3">Total do mês</p></div>
+  <Currency value={total} className="text-[13px] font-bold" style={{color:tag.cor}}/>
+  <button aria-label={tag.oculta?`Mostrar ${tag.label}`:`Ocultar ${tag.label}`} onClick={()=>toggleHide(tag.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] border border-border bg-el/60 text-t3 transition active:scale-95">{tag.oculta?<IconEye size={13}/>:<IconEyeOff size={13}/>}</button>
+  <DangerButton aria-label={`Excluir tag ${tag.label}`} onClick={()=>setDeleteId(tag.id)} className="h-8 w-8 rounded-[11px]"/>
  </div>
- return <div>
-  <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-t1">Suas tags</p><p className="mt-0.5 text-[9px] text-t3">Organize e categorize seus lançamentos</p></div><AddButton onClick={()=>setCreating(true)}>Nova tag</AddButton></div>
-  <div className="mb-4 flex items-center gap-2">
-   <div className="relative flex-1"><Search className="absolute left-3 top-3 text-t3" size={15}/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Filtrar tags" className="pl-9 focus:border-flux"/></div>
-   <div className="flex h-11 items-center rounded-xl bg-el p-[3px]">
-    <button aria-label="Ordenar por valor" onClick={()=>setSort('valor')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition',sort==='valor'?'bg-surface text-flux shadow-[0_2px_7px_rgba(45,31,23,.09)]':'text-t3')}><IconSortDescendingNumbers size={15}/></button>
-    <button aria-label="Ordenar por nome" onClick={()=>setSort('nome')} className={cn('grid h-full w-9 place-items-center rounded-[9px] transition',sort==='nome'?'bg-surface text-flux shadow-[0_2px_7px_rgba(45,31,23,.09)]':'text-t3')}><IconSortAscendingLetters size={15}/></button>
+ return <div className="space-y-4 pb-[30px]">
+  <div className="flex items-center justify-between gap-3"><div><p className="flex items-center gap-2 text-[13px] font-bold text-t1"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Suas tags</p><p className="mt-1 pl-4 text-[9px] text-t3">Organize e categorize seus lançamentos</p></div><button type="button" onClick={()=>setCreating(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:'var(--flux-orange)',background:'color-mix(in oklch,var(--flux-orange) 12%,transparent)'}}>+ Nova tag</button></div>
+  <div className="flex items-center gap-2">
+   <div className="relative flex-1"><Search className="absolute left-3 top-3 text-t3" size={15}/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Filtrar tags" className="h-11 rounded-[14px] bg-el/40 pl-9 focus:border-flux"/></div>
+   <div className="flex h-11 items-center rounded-[14px] border border-border bg-el p-1">
+    <button aria-label="Ordenar por valor" onClick={()=>setSort('valor')} className={cn('grid h-full w-9 place-items-center rounded-[10px] transition',sort==='valor'?'bg-surface text-flux shadow-[0_2px_7px_rgba(15,37,64,.09)]':'text-t3')}><IconSortDescendingNumbers size={15}/></button>
+    <button aria-label="Ordenar por nome" onClick={()=>setSort('nome')} className={cn('grid h-full w-9 place-items-center rounded-[10px] transition',sort==='nome'?'bg-surface text-flux shadow-[0_2px_7px_rgba(15,37,64,.09)]':'text-t3')}><IconSortAscendingLetters size={15}/></button>
    </div>
   </div>
-  <Card className="overflow-hidden">{visiveis.map(({tag,total})=><TagRow key={tag.id} tag={tag} total={total}/>)}{visiveis.length===0&&<p className="px-4 py-6 text-center text-[10px] text-t3">Nenhuma tag visível</p>}</Card>
+  <Card className="overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">{visiveis.map(({tag,total})=><TagRow key={tag.id} tag={tag} total={total}/>)}{visiveis.length===0&&<p className="px-4 py-6 text-center text-[10px] text-t3">Nenhuma tag visível</p>}</Card>
   {ocultas.length>0&&<>
    <button onClick={()=>setShowHidden(v=>!v)} className="mt-3 flex w-full items-center justify-center gap-1.5 py-1 text-[10px] font-semibold text-t3 transition active:scale-95"><IconEyeOff size={12}/>Ocultas ({ocultas.length})<IconChevronDown size={12} className={cn('transition',showHidden&&'rotate-180')}/></button>
-   {showHidden&&<Card className="mt-2 overflow-hidden">{ocultas.map(({tag,total})=><TagRow key={tag.id} tag={tag} total={total} hiddenRow/>)}</Card>}
+   {showHidden&&<Card className="mt-2 overflow-hidden rounded-[18px] border-0 shadow-[0_2px_10px_rgba(15,37,64,.05)]">{ocultas.map(({tag,total})=><TagRow key={tag.id} tag={tag} total={total} hiddenRow/>)}</Card>}
   </>}
   {creating&&<div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55" onClick={()=>setCreating(false)}>
    <div role="dialog" aria-label="Criar tag" className="safe-bottom w-full max-w-[390px] rounded-t-[28px] border-x border-t border-border bg-bg px-4 pb-5 pt-2.5 shadow-[0_-20px_60px_rgba(35,27,22,.24)]" onClick={event=>event.stopPropagation()}>
@@ -384,17 +391,17 @@ function FluxMenu(){
   })
   setCardToDelete(null)
  }
- return <div className="space-y-3">
-  <Card className="p-4"><p className="text-xs font-semibold">Saldo inicial do Flux</p><p className="mt-1 text-[9px] text-t3">Base exclusiva deste módulo · não altera a Tabela</p><MoneyInput allowNegative aria-label="Saldo inicial do Flux" value={data.flux.saldo_inicial??0} onValueChange={value=>mutate(d=>{d.flux.saldo_inicial=value})} className="number mt-4 focus-within:border-flux"/></Card>
-  <Card className="p-4"><p className="text-xs font-semibold">Planejamento diário</p><p className="mt-1 text-[9px] text-t3">Valor usado nas previsões futuras</p><MoneyInput value={data.flux.valor_diario_planejado} onValueChange={value=>mutate(d=>{d.flux.valor_diario_planejado=value})} className="number mt-4 focus-within:border-flux"/></Card>
-  <Card className="p-4">
-   <div className="flex items-center justify-between"><div><p className="text-xs font-semibold">Cartões</p><p className="mt-1 text-[9px] text-t3">Fechamento e vencimento das faturas</p></div>{!addingCard&&<AddButton onClick={()=>setAddingCard(true)}>Novo</AddButton>}</div>
+ return <div className="space-y-4 pb-[30px]">
+  <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Saldo inicial do Flux</p><p className="mt-1 pl-4 text-[9px] text-t3">Base exclusiva deste módulo · não altera a Tabela</p><MoneyInput allowNegative aria-label="Saldo inicial do Flux" value={data.flux.saldo_inicial??0} onValueChange={value=>mutate(d=>{d.flux.saldo_inicial=value})} className="number mt-3 h-11 border-flux/20 bg-el focus-within:border-flux"/></Card>
+  <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]"><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Planejamento diário</p><p className="mt-1 pl-4 text-[9px] text-t3">Valor usado nas previsões futuras</p><MoneyInput value={data.flux.valor_diario_planejado} onValueChange={value=>mutate(d=>{d.flux.valor_diario_planejado=value})} className="number mt-3 h-11 border-flux/20 bg-el focus-within:border-flux"/></Card>
+  <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
+   <div className="flex items-center justify-between"><div><p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Cartões</p><p className="mt-1 pl-4 text-[9px] text-t3">Fechamento e vencimento das faturas</p></div>{!addingCard&&<button type="button" onClick={()=>setAddingCard(true)} className="rounded-full px-[11px] py-[5px] text-[11px] font-semibold transition active:scale-95" style={{color:'var(--flux-orange)',background:'color-mix(in oklch,var(--flux-orange) 12%,transparent)'}}>+ Novo</button>}</div>
    <div className="mt-3 space-y-2">
     {cartoes.map(card=><div key={card.id} className="flex items-center gap-2.5 rounded-[14px] border border-border bg-el/40 p-3">
      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-flux/10 text-flux"><IconCreditCard size={17}/></span>
      <div className="min-w-0 flex-1"><p className="truncate text-[12px] font-semibold text-t1">{card.nome}</p><p className="mt-0.5 text-[9px] text-t3">fecha dia {card.fechamento} · vence dia {card.vencimento}</p></div>
      <div className="shrink-0 text-right"><p className="text-[8px] font-bold uppercase tracking-[.5px] text-t3">Próx. venc.</p><p className="number mt-0.5 text-[11px] font-bold text-flux">{nextDueLabel(card.vencimento)}</p></div>
-     <DangerButton aria-label={`Excluir cartão ${card.nome}`} onClick={()=>mutate(d=>{d.flux.cartoes=(d.flux.cartoes??[]).filter(x=>x.id!==card.id)})}/>
+     <DangerButton className="h-10 w-10 rounded-[11px]" aria-label={`Excluir cartão ${card.nome}`} onClick={()=>mutate(d=>{d.flux.cartoes=(d.flux.cartoes??[]).filter(x=>x.id!==card.id)})}/>
     </div>)}
     {cartoes.length===0&&!addingCard&&<p className="rounded-[14px] border border-dashed border-border px-3 py-4 text-center text-[10px] text-t3">Nenhum cartão cadastrado</p>}
    </div>
@@ -408,20 +415,20 @@ function TemperaturaCard(){
  const {data,mutate}=useFinancas()
  const limites=getLimites(data.flux.temperatura)
  const setLimite=(index:number,value:number)=>mutate(d=>{const arr=[...getLimites(d.flux.temperatura)];arr[index]=value;d.flux.temperatura={limites:arr}})
- return <Card className="p-4">
-  <p className="text-xs font-semibold">Temperatura do saldo</p>
-  <p className="mt-1 text-[9px] text-t3">As cores são fixas — ajuste os limites de valor à sua renda</p>
-  <div className="mt-3 flex h-3 overflow-hidden rounded-full">{tempTiers.map(tier=><span key={tier.label} className="flex-1" style={{background:tier.bg}}/>)}</div>
-  <div className="mt-3 space-y-1.5">
+ return <Card className="overflow-hidden rounded-[18px] border-0 p-4 shadow-[0_2px_10px_rgba(15,37,64,.05)]">
+  <p className="flex items-center gap-2 text-[13px] font-bold"><span className="h-2 w-2 shrink-0 rounded-[2px] bg-flux"/>Temperatura do saldo</p>
+  <p className="mt-1 pl-4 text-[9px] text-t3">As cores são fixas — ajuste os limites de valor à sua renda</p>
+  <div className="mt-4 flex h-2.5 overflow-hidden rounded-full border border-white/70 shadow-inner">{tempTiers.map(tier=><span key={tier.label} className="flex-1" style={{background:tier.bg}}/>)}</div>
+  <div className="mt-4 space-y-2">
    {tempTiers.map((tier,index)=>{
     const last=index===tempTiers.length-1
     const editable=!last&&index>=2
-    return <div key={tier.label} className="flex items-center gap-2.5">
-     <span className="number grid h-8 w-10 shrink-0 place-items-center rounded-[8px] text-[10px] font-bold" style={{background:tier.bg,color:tier.fg}}>123</span>
-     <span className="min-w-0 flex-1"><span className="block truncate text-[10px] font-semibold text-t1">{tier.label}</span><span className="block text-[8px] text-t3">{last?'acima de':'até'}</span></span>
+    return <div key={tier.label} className="flex items-center gap-2.5 rounded-[14px] border border-border bg-el/35 px-2.5 py-2">
+     <span className="number grid h-9 w-10 shrink-0 place-items-center rounded-[10px] text-[10px] font-bold" style={{background:tier.bg,color:tier.fg}}>123</span>
+     <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-t1">{tier.label}</span><span className="block text-[9px] text-t3">{last?'acima de':'até'}</span></span>
      {editable
-      ?<MoneyInput allowNegative aria-label={`Limite da faixa ${tier.label}`} value={limites[index]} onValueChange={value=>setLimite(index,value)} className="number h-8 w-28 rounded-[10px] border-border bg-surface px-2.5 text-xs"/>
-      :<Currency value={limites[Math.min(index,limites.length-1)]} className="pr-2.5 text-xs font-bold text-t2"/>}
+      ?<MoneyInput allowNegative aria-label={`Limite da faixa ${tier.label}`} value={limites[index]} onValueChange={value=>setLimite(index,value)} className="number h-9 w-28 rounded-[11px] border-border bg-surface px-2.5 text-xs"/>
+      :<Currency value={limites[Math.min(index,limites.length-1)]} className="pr-2.5 text-[11px] font-bold text-t2"/>}
     </div>
    })}
   </div>
@@ -433,7 +440,7 @@ function NewCard({close,card}:{close:()=>void;card?:Cartao}){
  const [nome,setNome]=useState(card?.nome??'');const [fechamento,setFechamento]=useState(card?.fechamento??8);const [vencimento,setVencimento]=useState(card?.vencimento??15)
  const chip='inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[10px] font-semibold text-t2'
  const clampDay=(value:number)=>Math.min(31,Math.max(1,value||1))
- return <div className="mt-3 rounded-[14px] bg-el p-3">
+ return <div className="mt-3 rounded-[14px] border border-border bg-el p-3">
   <Input autoFocus placeholder="Nome do cartão" value={nome} onChange={e=>setNome(e.target.value)} className="h-9 bg-surface focus:border-flux"/>
   <div className="mt-2 flex flex-wrap items-center gap-2">
    <label className={chip}>fecha dia<input type="number" min="1" max="31" value={fechamento} onChange={e=>setFechamento(clampDay(Number(e.target.value)))} className="no-spin w-7 bg-transparent text-center outline-none"/></label>

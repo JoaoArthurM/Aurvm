@@ -40,8 +40,8 @@ export default function App() {
   const pages: Record<Tab, JSX.Element> = { inicio: <Dashboard />, tabela: <Tabela />, economia: <EconomiaPage />, emprestimos: <Emprestimos />, flux: <Flux />, config: loginVisible ? <Login /> : <Config /> }
   return <main className={cn('app-shell relative mx-auto h-[100dvh] w-full max-w-[390px] overflow-hidden bg-bg',loginVisible&&'login-shell')}>
     <div className={cn('app-scroll w-full overflow-x-hidden overflow-y-auto',tab==='flux'&&'flux-scroll')}>{pages[tab]}</div>
-    {!loginVisible&&<nav className="bottom-nav absolute z-40 flex items-stretch px-2 py-[5px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
-      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] border text-[9px] font-semibold transition duration-200 active:scale-95', tab===id?'border-border/40 shadow-[0_1px_5px_rgba(15,37,64,.09)]':'border-transparent text-t3')} style={tab===id?{color:activeNavColor(id),background:`color-mix(in oklch,${activeNavColor(id)} 12%,var(--surface))`}:undefined}>
+    {!loginVisible&&<nav className="bottom-nav absolute z-40 flex items-center px-2 py-[7px]" style={{left:'50%',right:'auto',width:`min(calc(100% - 24px), ${24+visibleNav.length*57}px)`,transform:'translateX(-50%)'}}>
+      {visibleNav.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setTab(id)} className={cn('relative flex h-[46px] min-w-0 flex-1 flex-col items-center justify-center gap-1 self-center rounded-[14px] border text-[9px] font-semibold transition duration-200 active:scale-95', tab===id?'border-border/40 shadow-[0_1px_5px_rgba(15,37,64,.09)]':'border-transparent text-t3')} style={tab===id?{color:activeNavColor(id),background:'var(--surface)'}:undefined}>
         <Icon size={18} strokeWidth={2}/><span>{label}</span>
       </button>)}
     </nav>}

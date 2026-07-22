@@ -32,7 +32,7 @@ export function Emprestimos() {
       mutate(draft => draft.emprestimos.pessoas.forEach((person,index) => { person.cor = personColors[index] }))
     }
   }, [data.emprestimos.pessoas, mutate, personColors])
-  const [active, setActive] = useState(data.emprestimos.pessoas[0]?.id ?? '')
+  const [active, setActive] = useState('')
   const [adding, setAdding] = useState(false)
   const [personOrder, setPersonOrder] = useState<'valor'|'nome'>('valor')
   const [personToDelete, setPersonToDelete] = useState<Pessoa|null>(null)
@@ -41,13 +41,13 @@ export function Emprestimos() {
   const pending = allLoans.filter((loan) => !loan.pago)
   const received = allLoans.filter((loan) => loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
   const total = pending.reduce((sum, loan) => sum + loan.valor, 0)
-  const activePerson = people.find(person => person.id === active)
   const sortedPeople = [...people].sort((a, b) => {
     if (personOrder === 'nome') return a.nome.localeCompare(b.nome, 'pt-BR')
     const aTotal = a.lancamentos.filter(loan => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
     const bTotal = b.lancamentos.filter(loan => !loan.pago).reduce((sum, loan) => sum + loan.valor, 0)
     return bTotal - aTotal || a.nome.localeCompare(b.nome, 'pt-BR')
   })
+  const listedPeople = active ? sortedPeople.filter(person => person.id === active) : sortedPeople
   const addPerson = (rawName: string) => {
     const name = rawName.trim()
     if (!name) return
@@ -91,7 +91,7 @@ export function Emprestimos() {
             return (
               <button
                 key={person.id}
-                onClick={() => setActive(person.id)}
+                onClick={() => setActive(current => current === person.id ? '' : person.id)}
                 className="min-w-0 rounded-[16px] border px-3 py-3 text-left shadow-[0_2px_9px_rgba(15,37,64,.04)] transition active:scale-[.98]"
                 style={{
                   borderColor: selected ? person.cor : 'var(--border)',
@@ -121,7 +121,7 @@ export function Emprestimos() {
 
         <section>
           <div className="space-y-[10px]">
-            {activePerson&&<PersonCard key={activePerson.id} person={activePerson} onRequestDelete={()=>setPersonToDelete(activePerson)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person:activePerson, loan })} />}
+            {listedPeople.map(person=><PersonCard key={person.id} person={person} onRequestDelete={()=>setPersonToDelete(person)} onRequestDeleteLoan={(loan)=>setLoanToDelete({ person, loan })} />)}
           </div>
         </section>
 
@@ -168,7 +168,7 @@ function LoanKpi({ label, value, color }: { label: string; value: ReactNode; col
 
 function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pessoa;onRequestDelete:()=>void;onRequestDeleteLoan:(loan:LancamentoPessoa)=>void }) {
   const mutate = useFinancas((state) => state.mutate)
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [reminderLoanId,setReminderLoanId]=useState<string|null>(null)
   const [loanView,setLoanView]=useState<'pending'|'paid'>('pending')
@@ -260,17 +260,19 @@ function PersonCard({ person,onRequestDelete,onRequestDeleteLoan }: { person: Pe
                   <div className="mt-3 flex items-center justify-end gap-2 border-t border-border/60 pt-3">
                     <button aria-label={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} title={loan.lembrete?'Editar lembrete':'Adicionar lembrete'} onClick={()=>setReminderLoanId(current=>current===loan.id?null:loan.id)} className={cn('glass-action glass-neutral grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border transition active:scale-95',loan.lembrete&&'ring-1 ring-border')}><Bell size={14}/></button>
                     <button
+                      type="button"
+                      aria-label={loan.pago?'Reabrir lançamento':'Marcar como pago'}
+                      title={loan.pago?'Reabrir lançamento':'Marcar como pago'}
                       onClick={() => mutate((draft) => {
                         const current = draft.emprestimos.pessoas
                           .find((item) => item.id === person.id)?.lancamentos
                           .find((item) => item.id === loan.id)
                         if (current) current.pago = !current.pago
                       })}
-                      className="glass-action inline-flex h-9 items-center gap-1.5 rounded-[10px] border px-3 text-[10px] font-semibold transition active:scale-95"
+                      className="glass-action grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border p-0 transition active:scale-95"
                       style={{'--glass-color':paidGreen} as CSSProperties}
                     >
                       <Check size={12} strokeWidth={2.2}/>
-                      {loan.pago?'Reabrir':'Marcar como pago'}
                     </button>
                     <DangerButton className="h-9 w-9 rounded-[10px]" aria-label={`Excluir ${loan.motivo}`} onClick={() => onRequestDeleteLoan(loan)} />
                   </div>
